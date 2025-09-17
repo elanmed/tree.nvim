@@ -1,4 +1,11 @@
-.PHONY: test lint docs
+.PHONY: dev clean test lint docs
+
+dev:
+	mkdir -p ~/.local/share/nvim/site/pack/dev/start/tree.nvim
+	stow -d .. -t ~/.local/share/nvim/site/pack/dev/start/tree.nvim tree.nvim
+
+clean:
+	rm -rf ~/.local/share/nvim/site/pack/dev
 
 test:
 	nvim --headless --noplugin -u ./scripts/minimal_init.lua -c "lua MiniTest.run()"
