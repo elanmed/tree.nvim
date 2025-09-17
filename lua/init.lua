@@ -82,11 +82,12 @@ M.tree = function(opts)
     local indent_chars = (" "):rep(indent)
     local rel_path = vim.fs.normalize(json.name)
     local abs_path = vim.fs.joinpath(cwd, rel_path)
+    local basename = vim.fs.basename(rel_path)
 
     local icon_info = get_icon_info { abs_path = abs_path, icon_type = json.type, icons_enabled = opts.icons_enabled }
 
     if json.type == "file" then
-      local formatted = ("%s%s %s"):format(indent_chars, icon_info.icon_char, rel_path)
+      local formatted = ("%s%s %s"):format(indent_chars, icon_info.icon_char, basename)
 
       --- @type Line
       local line = {
@@ -102,7 +103,7 @@ M.tree = function(opts)
         curr_bufnr_line = #lines
       end
     elseif json.type == "directory" then
-      local formatted = ("%s%s %s/"):format(indent_chars, icon_info.icon_char, vim.fs.basename(rel_path))
+      local formatted = ("%s%s %s/"):format(indent_chars, icon_info.icon_char, basename)
       --- @type Line
       local line = {
         abs_path = abs_path,
@@ -121,7 +122,7 @@ M.tree = function(opts)
     end
   end
 
-  indent_lines(tree_json[1], 0)
+  indent_lines(tree_json[1], 1)
 
   local results_bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_option_value("buftype", "nofile", { buf = results_bufnr, })
@@ -147,7 +148,6 @@ M.tree = function(opts)
   if curr_bufnr_line then
     vim.api.nvim_win_set_cursor(results_winnr, { curr_bufnr_line, 0, })
   end
-  vim.cmd "normal! ^"
 
   vim.schedule(function()
     for index, line in ipairs(lines) do
