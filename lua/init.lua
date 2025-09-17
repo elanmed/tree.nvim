@@ -126,17 +126,17 @@ M.tree = function(opts)
 
   indent_lines(tree_json[1], 1)
 
-  local results_bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_set_option_value("buftype", "nofile", { buf = results_bufnr, })
-  vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = results_bufnr, })
-  vim.api.nvim_set_option_value("buflisted", false, { buf = results_bufnr, })
+  local tree_bufnr = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_option_value("buftype", "nofile", { buf = tree_bufnr, })
+  vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = tree_bufnr, })
+  vim.api.nvim_set_option_value("buflisted", false, { buf = tree_bufnr, })
 
   local border_height = 2
-  local results_winnr = (function()
+  local tree_winnr = (function()
     local width = math.min(vim.o.columns, max_line_width + 2)
 
     if opts.win_type == "popup" then
-      return vim.api.nvim_open_win(results_bufnr, true, {
+      return vim.api.nvim_open_win(tree_bufnr, true, {
         relative = "editor",
         row = 1,
         col = 0,
@@ -148,22 +148,24 @@ M.tree = function(opts)
       })
     end
 
-    return vim.api.nvim_open_win(results_bufnr, true, {
+    return vim.api.nvim_open_win(tree_bufnr, true, {
       split = "left",
       width = width,
       style = "minimal",
     })
   end)()
 
-  vim.api.nvim_set_option_value("foldmethod", "indent", { win = results_winnr, })
-  vim.api.nvim_set_option_value("cursorline", true, { win = results_winnr, })
+  vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
+  vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
 
-  vim.api.nvim_win_set_buf(results_winnr, results_bufnr)
+  vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
   local formatted_lines = vim.tbl_map(function(line) return line.formatted end, lines)
-  vim.api.nvim_buf_set_lines(results_bufnr, 0, -1, false, formatted_lines)
+  vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, formatted_lines)
   if curr_bufnr_line then
-    vim.api.nvim_win_set_cursor(results_winnr, { curr_bufnr_line, 0, })
+    vim.api.nvim_win_set_cursor(tree_winnr, { curr_bufnr_line, 0, })
   end
+  vim.cmd "normal! ^h"
+  vim.cmd "normal! zz"
 
   vim.schedule(function()
     for index, line in ipairs(lines) do
@@ -172,7 +174,7 @@ M.tree = function(opts)
       local row_0_indexed = row_1_indexed - 1
 
       vim.hl.range(
-        results_bufnr,
+        tree_bufnr,
         ns_id,
         line.icon_hl,
         { row_0_indexed, icon_hl_col_0_indexed },
@@ -182,7 +184,7 @@ M.tree = function(opts)
   end)
 
   local close_win = function()
-    vim.api.nvim_win_close(results_winnr, true)
+    vim.api.nvim_win_close(tree_winnr, true)
   end
   local select = function()
     local line_nr = vim.fn.line "."
@@ -203,7 +205,7 @@ M.tree = function(opts)
   for key, map in pairs(opts.keymaps) do
     vim.keymap.set("n", key, function()
       keymap_fns[map]()
-    end, { buffer = results_bufnr, })
+    end, { buffer = tree_bufnr, })
   end
 end
 
