@@ -1,12 +1,18 @@
 local M = {}
 
+local ns_id = vim.api.nvim_create_namespace "Tree"
+
 M.tree = function()
   local curr_bufnr = vim.api.nvim_get_current_buf()
   local bufname_abs_path = vim.api.nvim_buf_get_name(curr_bufnr)
-
   local cwd = vim.uv.cwd()
   if cwd == nil then
     error "[tree.nvim] `cwd` is nil"
+  end
+
+  local mini_icons_ok, mini_icons = pcall(require, "mini.icons")
+  if not mini_icons_ok then
+    error "[tree.nvim] `mini.icons` is a required dep"
   end
 
   local obj = vim.system({ "tree", "-J", "-f", "-a", "--gitignore", }, { cwd = cwd, }):wait()
@@ -22,23 +28,28 @@ M.tree = function()
   --- @field abs_path string
   --- @field icon_char string
   --- @field icon_hl string
+  --- @field indent number
 
   --- @type Line[]
   local lines = {}
   local max_line_width = 0
 
   local function indent_lines(json, indent)
-    local indent_chars = ("  "):rep(indent)
-    local abs_path = vim.fs.normalize(json.name)
-    local rel_path = vim.fs.relpath(cwd, abs_path)
+    local indent_chars = (" "):rep(indent)
+    local rel_path = vim.fs.normalize(json.name)
+    local abs_path = vim.fs.joinpath(cwd, rel_path)
 
     if json.type == "file" then
+      local icon_char, icon_hl = mini_icons.get("file", abs_path)
+      local formatted = ("%s%s %s"):format(indent_chars, icon_char, rel_path)
+
       --- @type Line
       local line = {
         abs_path = abs_path,
-        formatted = indent_chars .. rel_path,
-        icon_hl = "",
-        icon_char = ""
+        formatted = formatted,
+        icon_hl = icon_hl,
+        icon_char = icon_char,
+        indent = indent
       }
       table.insert(lines, line)
       max_line_width = math.max(max_line_width, #line.formatted)
@@ -46,19 +57,22 @@ M.tree = function()
         curr_bufnr_line = #lines
       end
     elseif json.type == "directory" then
+      local icon_char, icon_hl = mini_icons.get("directory", abs_path)
+      local formatted = ("%s%s %s/"):format(indent_chars, icon_char, vim.fs.basename(rel_path))
       --- @type Line
       local line = {
         abs_path = abs_path,
-        formatted = indent_chars .. vim.fs.basename(rel_path) .. "/",
-        icon_hl = "",
-        icon_char = ""
+        formatted = formatted,
+        icon_char = icon_char,
+        icon_hl = icon_hl,
+        indent = indent
       }
       table.insert(lines, line)
       max_line_width = math.max(max_line_width, #line.formatted)
 
       if not json.contents then return end
       for _, file_json in ipairs(json.contents) do
-        indent_lines(file_json, indent + 1)
+        indent_lines(file_json, indent + 2)
       end
     end
   end
@@ -91,10 +105,28 @@ M.tree = function()
   end
   vim.cmd "normal! ^"
 
+  vim.schedule(function()
+    for index, line in ipairs(lines) do
+      local icon_hl_col_0_indexed = line.indent
+      local row_1_indexed = index
+      local row_0_indexed = row_1_indexed - 1
+
+      vim.hl.range(
+        results_bufnr,
+        ns_id,
+        line.icon_hl,
+        { row_0_indexed, icon_hl_col_0_indexed },
+        { row_0_indexed, icon_hl_col_0_indexed + 1 }
+      )
+    end
+  end)
+
+
   vim.keymap.set("n", "<cr>", function()
-    local line = vim.api.nvim_get_current_line()
+    local line_nr = vim.fn.line "."
+    local line = lines[line_nr]
     vim.api.nvim_win_close(winnr, true)
-    vim.cmd("edit " .. vim.trim(line))
+    vim.cmd("edit " .. vim.trim(line.abs_path))
   end, { buffer = results_bufnr, })
 end
 
