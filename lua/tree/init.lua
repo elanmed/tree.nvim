@@ -187,7 +187,7 @@ M.tree = function(opts)
     end
   end)
 
-  local close_win = function()
+  local close_tree = function()
     vim.api.nvim_win_close(tree_winnr, true)
   end
   local select = function()
@@ -200,10 +200,10 @@ M.tree = function(opts)
   end
 
   local keymap_fns = {
-    ["close-tree"] = close_win,
+    ["close-tree"] = close_tree,
     ["select-close-tree"] = function()
       select()
-      close_win()
+      close_tree()
     end,
     ["select-focus-win"] = select,
     ["select-focus-tree"] = function()
