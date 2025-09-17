@@ -41,6 +41,7 @@ end
 --- @class TreeOpts
 --- @field icons_enabled boolean
 --- @field keymaps TreeKeymaps
+--- @field win_type "popup"|"split"
 
 --- @class TreeKeymaps
 --- @field [string] "close-win"|"select"|"select-close-win"
@@ -50,6 +51,7 @@ M.tree = function(opts)
   opts = default(opts, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
   opts.keymaps = default(opts.keymaps, {})
+  opts.win_type = default(opts.win_type, "split")
 
   local curr_winnr = vim.api.nvim_get_current_win()
   local curr_bufnr = vim.api.nvim_get_current_buf()
@@ -130,17 +132,31 @@ M.tree = function(opts)
   vim.api.nvim_set_option_value("buflisted", false, { buf = results_bufnr, })
 
   local border_height = 2
-  local results_winnr = vim.api.nvim_open_win(results_bufnr, true, {
-    relative = "editor",
-    row = 1,
-    col = 0,
-    width = math.min(vim.o.columns, max_line_width + 2),
-    height = math.min(vim.o.lines - 1 - border_height, #lines),
-    border = "rounded",
-    style = "minimal",
-    title = "Tree",
-  })
+  local results_winnr = (function()
+    local width = math.min(vim.o.columns, max_line_width + 2)
+
+    if opts.win_type == "popup" then
+      return vim.api.nvim_open_win(results_bufnr, true, {
+        relative = "editor",
+        row = 1,
+        col = 0,
+        width = width,
+        height = math.min(vim.o.lines - 1 - border_height, #lines),
+        border = "rounded",
+        style = "minimal",
+        title = "Tree",
+      })
+    end
+
+    return vim.api.nvim_open_win(results_bufnr, true, {
+      split = "left",
+      width = width,
+      style = "minimal",
+    })
+  end)()
+
   vim.api.nvim_set_option_value("foldmethod", "indent", { win = results_winnr, })
+  vim.api.nvim_set_option_value("cursorline", true, { win = results_winnr, })
 
   vim.api.nvim_win_set_buf(results_winnr, results_bufnr)
   local formatted_lines = vim.tbl_map(function(line) return line.formatted end, lines)
