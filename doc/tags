@@ -1,2 +1,7 @@
+tree-api	tree.txt	/*tree-api*
+tree-example-config	tree.txt	/*tree-example-config*
+tree-status	tree.txt	/*tree-status*
+tree-table-of-contents	tree.txt	/*tree-table-of-contents*
+tree-tree	tree.txt	/*tree-tree*
 tree-tree.nvim	tree.txt	/*tree-tree.nvim*
 tree.txt	tree.txt	/*tree.txt*

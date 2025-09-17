@@ -1,12 +1,64 @@
 *tree.txt*                                      Last change: 2025 September 16
 
 ==============================================================================
+Table of Contents                                     *tree-table-of-contents*
+
+Status ......................................................... |tree-status|
+API ............................................................... |tree-api|
+`tree` ........................................................... |tree-tree|
+Example config ......................................... |tree-example-config|
+
+==============================================================================
 `TREE.NVIM`                                                   *tree-tree.nvim*
 
 
-  WIP
-
 A barebones, read-only file tree using the `tree` cli
 
+
+------------------------------------------------------------------------------
+STATUS                                                           *tree-status*
+
+
+Works fine, API may change
+
+
+------------------------------------------------------------------------------
+API                                                                 *tree-api*
+
+
+
+                                                                              
+`TREE`                                                             *tree-tree*
+
+>lua
+    --- @class TreeOpts
+    --- @field icons_enabled boolean
+    --- @field keymaps TreeKeymaps
+    --- @field win_type "popup"|"split"
+    
+    --- @class TreeKeymaps
+    --- @field [string] "close-win"|"select"|"select-close-win"
+    
+    --- @param opts TreeOpts
+    M.tree = function(opts) end
+<
+
+------------------------------------------------------------------------------
+EXAMPLE CONFIG                                           *tree-example-config*
+
+
+>lua
+    require "tree".tree({
+      -- defaults to:
+      icons_enabled = true,
+      win_type = "split",
+      -- no keymaps are set by default
+      keymaps = {
+        ["<cr>"] = "select-close-win",
+        ["o"] = "select",
+        ["q"] = "close-win"
+      }
+    })
+<
 
 vim:tw=78:ts=8:ft=help:norl:
