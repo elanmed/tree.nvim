@@ -44,7 +44,7 @@ end
 --- @field win_type "popup"|"split"
 
 --- @class TreeKeymaps
---- @field [string] "close-win"|"select"|"select-close-win"
+--- @field [string] "close-tree"|"select-focus-win"|"select-focus-tree"|"select-close-tree"
 
 --- @param opts TreeOpts
 M.tree = function(opts)
@@ -75,6 +75,7 @@ M.tree = function(opts)
   --- @field icon_char string
   --- @field icon_hl string
   --- @field indent number
+  --- @field type "file"|"directory"
 
   --- @type Line[]
   local lines = {}
@@ -86,9 +87,9 @@ M.tree = function(opts)
     local abs_path = vim.fs.joinpath(cwd, rel_path)
     local basename = vim.fs.basename(rel_path)
 
-    local icon_info = get_icon_info { abs_path = abs_path, icon_type = json.type, icons_enabled = opts.icons_enabled }
 
     if json.type == "file" then
+      local icon_info = get_icon_info { abs_path = abs_path, icon_type = "file", icons_enabled = opts.icons_enabled }
       local formatted = ("%s%s %s"):format(indent_chars, icon_info.icon_char, basename)
 
       --- @type Line
@@ -97,7 +98,8 @@ M.tree = function(opts)
         formatted = formatted,
         icon_hl = icon_info.icon_hl,
         icon_char = icon_info.icon_char,
-        indent = indent
+        indent = indent,
+        type = "file"
       }
       table.insert(lines, line)
       max_line_width = math.max(max_line_width, #line.formatted)
@@ -105,6 +107,7 @@ M.tree = function(opts)
         curr_bufnr_line = #lines
       end
     elseif json.type == "directory" then
+      local icon_info = get_icon_info { abs_path = abs_path, icon_type = "directory", icons_enabled = opts.icons_enabled }
       local formatted = ("%s%s %s/"):format(indent_chars, icon_info.icon_char, basename)
       --- @type Line
       local line = {
@@ -112,7 +115,8 @@ M.tree = function(opts)
         formatted = formatted,
         icon_char = icon_info.icon_char,
         icon_hl = icon_info.icon_hl,
-        indent = indent
+        indent = indent,
+        type = "directory"
       }
       table.insert(lines, line)
       max_line_width = math.max(max_line_width, #line.formatted)
@@ -189,16 +193,27 @@ M.tree = function(opts)
   local select = function()
     local line_nr = vim.fn.line "."
     local line = lines[line_nr]
+    if line.type ~= "file" then return end
+
     vim.api.nvim_set_current_win(curr_winnr)
     vim.cmd("edit " .. vim.trim(line.abs_path))
   end
 
   local keymap_fns = {
-    select = select,
-    ["close-win"] = close_win,
-    ["select-close-win"] = function()
+    ["close-tree"] = close_win,
+    ["select-close-tree"] = function()
       select()
       close_win()
+    end,
+    ["select-focus-win"] = select,
+    ["select-focus-tree"] = function()
+      local line_nr = vim.fn.line "."
+      local line = lines[line_nr]
+      if line.type ~= "file" then return end
+
+      vim.api.nvim_win_call(curr_winnr, function()
+        vim.cmd("edit " .. vim.trim(line.abs_path))
+      end)
     end
   }
 
@@ -209,12 +224,13 @@ M.tree = function(opts)
   end
 end
 
--- M.tree({
---   keymaps = {
---     ["<cr>"] = "select-close-win",
---     ["o"] = "select",
---     ["q"] = "close-win"
---   }
--- })
+M.tree({
+  keymaps = {
+    ["<cr>"] = "select-close-tree",
+    ["o"] = "select-focus-win",
+    ["t"] = "select-focus-tree",
+    ["q"] = "close-tree"
+  }
+})
 
 return M

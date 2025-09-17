@@ -16,7 +16,7 @@ Works fine, API may change
 --- @field win_type "popup"|"split"
 
 --- @class TreeKeymaps
---- @field [string] "close-win"|"select"|"select-close-win"
+--- @field [string] "close-tree"|"select-focus-win"|"select-close-tree"|"select-focus-tree"
 
 --- @param opts TreeOpts
 M.tree = function(opts) end
@@ -30,9 +30,10 @@ require "tree".tree({
   win_type = "split",
   -- no keymaps are set by default
   keymaps = {
-    ["<cr>"] = "select-close-win",
-    ["o"] = "select",
-    ["q"] = "close-win"
+    ["<cr>"] = "select-close-tree",
+    ["t"] = "select-focus-tree",
+    ["o"] = "select-focus-win",
+    ["q"] = "close-tree"
   }
 })
 ```

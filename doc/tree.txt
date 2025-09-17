@@ -1,4 +1,4 @@
-*tree.txt*                                      Last change: 2025 September 16
+*tree.txt*                                      Last change: 2025 September 17
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
@@ -37,7 +37,7 @@ API                                                                 *tree-api*
     --- @field win_type "popup"|"split"
     
     --- @class TreeKeymaps
-    --- @field [string] "close-win"|"select"|"select-close-win"
+    --- @field [string] "close-tree"|"select-focus-win"|"select-close-tree"|"select-focus-tree"
     
     --- @param opts TreeOpts
     M.tree = function(opts) end
@@ -54,9 +54,10 @@ EXAMPLE CONFIG                                           *tree-example-config*
       win_type = "split",
       -- no keymaps are set by default
       keymaps = {
-        ["<cr>"] = "select-close-win",
-        ["o"] = "select",
-        ["q"] = "close-win"
+        ["<cr>"] = "select-close-tree",
+        ["t"] = "select-focus-tree",
+        ["o"] = "select-focus-win",
+        ["q"] = "close-tree"
       }
     })
 <
