@@ -40,12 +40,18 @@ end
 
 --- @class TreeOpts
 --- @field icons_enabled boolean
+--- @field keymaps TreeKeymaps
+
+--- @class TreeKeymaps
+--- @field [string] "close-win"|"select"|"select-close-win"
 
 --- @param opts TreeOpts
 M.tree = function(opts)
   opts = default(opts, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
+  opts.keymaps = default(opts.keymaps, {})
 
+  local curr_winnr = vim.api.nvim_get_current_win()
   local curr_bufnr = vim.api.nvim_get_current_buf()
   local bufname_abs_path = vim.api.nvim_buf_get_name(curr_bufnr)
   local cwd = vim.uv.cwd()
@@ -123,7 +129,7 @@ M.tree = function(opts)
   vim.api.nvim_set_option_value("buflisted", false, { buf = results_bufnr, })
 
   local border_height = 2
-  local winnr = vim.api.nvim_open_win(results_bufnr, true, {
+  local results_winnr = vim.api.nvim_open_win(results_bufnr, true, {
     relative = "editor",
     row = 1,
     col = 0,
@@ -133,13 +139,13 @@ M.tree = function(opts)
     style = "minimal",
     title = "Tree",
   })
-  vim.api.nvim_set_option_value("foldmethod", "indent", { win = winnr, })
+  vim.api.nvim_set_option_value("foldmethod", "indent", { win = results_winnr, })
 
-  vim.api.nvim_win_set_buf(winnr, results_bufnr)
+  vim.api.nvim_win_set_buf(results_winnr, results_bufnr)
   local formatted_lines = vim.tbl_map(function(line) return line.formatted end, lines)
   vim.api.nvim_buf_set_lines(results_bufnr, 0, -1, false, formatted_lines)
   if curr_bufnr_line then
-    vim.api.nvim_win_set_cursor(winnr, { curr_bufnr_line, 0, })
+    vim.api.nvim_win_set_cursor(results_winnr, { curr_bufnr_line, 0, })
   end
   vim.cmd "normal! ^"
 
@@ -159,15 +165,38 @@ M.tree = function(opts)
     end
   end)
 
-
-  vim.keymap.set("n", "<cr>", function()
+  local close_win = function()
+    vim.api.nvim_win_close(results_winnr, true)
+  end
+  local select = function()
     local line_nr = vim.fn.line "."
     local line = lines[line_nr]
-    vim.api.nvim_win_close(winnr, true)
+    vim.api.nvim_set_current_win(curr_winnr)
     vim.cmd("edit " .. vim.trim(line.abs_path))
-  end, { buffer = results_bufnr, })
+  end
+
+  local keymap_fns = {
+    select = select,
+    ["close-win"] = close_win,
+    ["select-close-win"] = function()
+      select()
+      close_win()
+    end
+  }
+
+  for key, map in pairs(opts.keymaps) do
+    vim.keymap.set("n", key, function()
+      keymap_fns[map]()
+    end, { buffer = results_bufnr, })
+  end
 end
 
--- M.tree({ icons_enabled = true })
+-- M.tree({
+--   keymaps = {
+--     ["<cr>"] = "select-close-win",
+--     ["o"] = "select",
+--     ["q"] = "close-win"
+--   }
+-- })
 
 return M
