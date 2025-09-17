@@ -2,17 +2,55 @@ local M = {}
 
 local ns_id = vim.api.nvim_create_namespace "Tree"
 
-M.tree = function()
+--- @generic T
+--- @param val T | nil
+--- @param default_val T
+--- @return T
+local default = function(val, default_val)
+  if val == nil then
+    return default_val
+  end
+  return val
+end
+
+--- @class GetIconInfoOpts
+--- @field icons_enabled boolean
+--- @field abs_path string
+--- @field icon_type "file" | "directory"
+--- @param opts GetIconInfoOpts
+local get_icon_info = function(opts)
+  if not opts.icons_enabled then
+    return {
+      icon_char = "",
+      icon_hl = nil,
+    }
+  end
+
+  local mini_icons_ok, mini_icons = pcall(require, "mini.icons")
+  if not mini_icons_ok then
+    error "[tree.nvim] `mini.icons` is required when `icons_enabled` is `true`"
+  end
+
+  local icon_char, icon_hl = mini_icons.get(opts.icon_type, opts.abs_path)
+  return {
+    icon_char = icon_char,
+    icon_hl = icon_hl,
+  }
+end
+
+--- @class TreeOpts
+--- @field icons_enabled boolean
+
+--- @param opts TreeOpts
+M.tree = function(opts)
+  opts = default(opts, {})
+  opts.icons_enabled = default(opts.icons_enabled, true)
+
   local curr_bufnr = vim.api.nvim_get_current_buf()
   local bufname_abs_path = vim.api.nvim_buf_get_name(curr_bufnr)
   local cwd = vim.uv.cwd()
   if cwd == nil then
     error "[tree.nvim] `cwd` is nil"
-  end
-
-  local mini_icons_ok, mini_icons = pcall(require, "mini.icons")
-  if not mini_icons_ok then
-    error "[tree.nvim] `mini.icons` is a required dep"
   end
 
   local obj = vim.system({ "tree", "-J", "-f", "-a", "--gitignore", }, { cwd = cwd, }):wait()
@@ -39,16 +77,17 @@ M.tree = function()
     local rel_path = vim.fs.normalize(json.name)
     local abs_path = vim.fs.joinpath(cwd, rel_path)
 
+    local icon_info = get_icon_info { abs_path = abs_path, icon_type = json.type, icons_enabled = opts.icons_enabled }
+
     if json.type == "file" then
-      local icon_char, icon_hl = mini_icons.get("file", abs_path)
-      local formatted = ("%s%s %s"):format(indent_chars, icon_char, rel_path)
+      local formatted = ("%s%s %s"):format(indent_chars, icon_info.icon_char, rel_path)
 
       --- @type Line
       local line = {
         abs_path = abs_path,
         formatted = formatted,
-        icon_hl = icon_hl,
-        icon_char = icon_char,
+        icon_hl = icon_info.icon_hl,
+        icon_char = icon_info.icon_char,
         indent = indent
       }
       table.insert(lines, line)
@@ -57,14 +96,13 @@ M.tree = function()
         curr_bufnr_line = #lines
       end
     elseif json.type == "directory" then
-      local icon_char, icon_hl = mini_icons.get("directory", abs_path)
-      local formatted = ("%s%s %s/"):format(indent_chars, icon_char, vim.fs.basename(rel_path))
+      local formatted = ("%s%s %s/"):format(indent_chars, icon_info.icon_char, vim.fs.basename(rel_path))
       --- @type Line
       local line = {
         abs_path = abs_path,
         formatted = formatted,
-        icon_char = icon_char,
-        icon_hl = icon_hl,
+        icon_char = icon_info.icon_char,
+        icon_hl = icon_info.icon_hl,
         indent = indent
       }
       table.insert(lines, line)
@@ -130,6 +168,6 @@ M.tree = function()
   end, { buffer = results_bufnr, })
 end
 
--- M.tree()
+-- M.tree({ icons_enabled = true })
 
 return M
