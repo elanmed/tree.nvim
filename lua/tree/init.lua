@@ -167,6 +167,7 @@ M.tree = function(opts)
   vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, formatted_lines)
   if curr_bufnr_line then
     vim.api.nvim_win_set_cursor(tree_winnr, { curr_bufnr_line, 0, })
+    vim.api.nvim_buf_set_mark(0, "a", curr_bufnr_line, 0, {})
   end
   vim.cmd "normal! ^h"
   vim.cmd "normal! zz"
