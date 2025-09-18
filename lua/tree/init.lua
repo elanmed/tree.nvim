@@ -56,16 +56,14 @@ local function indent_lines(opts)
   --- @type IndentedLine[]
   local lines = {}
   for _, str in ipairs(opts.chunk) do
-    local subbed = str
-    subbed = subbed:gsub("├──", " ")
-    subbed = subbed:gsub("└──", " ")
-    subbed = subbed:gsub("│  ", " ")
-    subbed = subbed:gsub("│", " ")
-    subbed = subbed:gsub("[%c\128-\255]", function(c)
-      return c == " " and c or ""
-    end)
-    local whitespace = subbed:match "^%s*"
-    local filename = vim.trim(subbed)
+    local period_pos = str:find "%."
+    if not period_pos then
+      goto continue
+      -- error "[tree.nvim] Expected a period in the tree output"
+    end
+    local prefix_length = period_pos - 1
+    local whitespace = string.rep(" ", prefix_length)
+    local filename = str:sub(period_pos)
 
     local rel_path = vim.fs.normalize(filename)
     local abs_path = vim.fs.joinpath(opts.cwd, rel_path)
@@ -85,6 +83,8 @@ local function indent_lines(opts)
       type = type,
     }
     table.insert(lines, line)
+
+    ::continue::
   end
   return lines
 end
@@ -194,7 +194,7 @@ M.tree = function(opts)
   --- @type FormattedLine[]
   local lines = {}
 
-  vim.system({ "tree", "-f", "-a", "--gitignore", "--noreport", "--charset=utf-8", }, {
+  vim.system({ "tree", "-f", "-a", "--gitignore", "--noreport", "--charset=ascii", "-L", "2", }, {
     cwd = cwd,
     stdout = function(err, data)
       if err then return end
@@ -232,9 +232,7 @@ M.tree = function(opts)
         vim.api.nvim_win_set_cursor(tree_winnr, { curr_bufnr_line, 0, })
         vim.api.nvim_buf_set_mark(0, "a", curr_bufnr_line, 0, {})
       end
-      vim.cmd "normal! ^h"
       vim.cmd "normal! zz"
-
 
       local close_tree = function()
         vim.api.nvim_win_close(tree_winnr, true)
