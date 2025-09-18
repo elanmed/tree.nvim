@@ -231,6 +231,8 @@ M.tree = function(opts)
     end,
   }, function()
     vim.schedule(function()
+      vim.api.nvim_set_option_value("modifiable", false, { buf = tree_bufnr, })
+
       local max_line_width = get_max_line_width(lines)
       vim.api.nvim_win_set_width(tree_winnr, math.min(vim.o.columns, max_line_width))
 
