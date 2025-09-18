@@ -203,32 +203,26 @@ M.tree = function(opts)
       local indented_lines = indent_lines { chunk = chunk, cwd = cwd, }
       vim.schedule(function()
         local formatted_lines = format_lines { icons_enabled = opts.icons_enabled, lines = indented_lines, }
-
         lines = vim.list_extend(lines, formatted_lines)
-        vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false,
-          vim.tbl_map(function(line) return line.formatted end, formatted_lines)
-        )
+        vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, vim.tbl_map(function(line) return line.formatted end, lines))
 
-        vim.schedule(function()
-          for index, line in ipairs(lines) do
-            local icon_hl_col_0_indexed = #line.whitespace
-            local row_1_indexed = index
-            local row_0_indexed = row_1_indexed - 1
+        for index, line in ipairs(lines) do
+          local icon_hl_col_0_indexed = #line.whitespace
+          local row_1_indexed = index
+          local row_0_indexed = row_1_indexed - 1
 
-            vim.hl.range(
-              tree_bufnr,
-              ns_id,
-              line.icon_hl,
-              { row_0_indexed, icon_hl_col_0_indexed, },
-              { row_0_indexed, icon_hl_col_0_indexed + 1, }
-            )
-          end
-        end)
+          vim.hl.range(
+            tree_bufnr,
+            ns_id,
+            line.icon_hl,
+            { row_0_indexed, icon_hl_col_0_indexed, },
+            { row_0_indexed, icon_hl_col_0_indexed + 1, }
+          )
+        end
       end)
     end,
   }, function()
     vim.schedule(function()
-      print()
       local max_line_width = get_max_line_width(lines)
       vim.api.nvim_win_set_width(tree_winnr, math.min(vim.o.columns, max_line_width))
 
