@@ -164,7 +164,6 @@ M.tree = function(opts)
 
   local tree_bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_option_value("buftype", "nofile", { buf = tree_bufnr, })
-  vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = tree_bufnr, })
   vim.api.nvim_set_option_value("buflisted", false, { buf = tree_bufnr, })
 
   local border_height = 2
