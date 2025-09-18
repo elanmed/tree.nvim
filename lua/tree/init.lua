@@ -202,6 +202,7 @@ M.tree = function(opts)
   vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
   vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
   vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
+  vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, { "Loading...", })
 
   --- @type FormattedLine[]
   local lines = {}
