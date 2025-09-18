@@ -203,8 +203,9 @@ M.tree = function(opts)
       local indented_lines = indent_lines { chunk = chunk, cwd = cwd, }
       vim.schedule(function()
         local formatted_lines = format_lines { icons_enabled = opts.icons_enabled, lines = indented_lines, }
+        vim.api.nvim_buf_set_lines(tree_bufnr, #lines, -1, false,
+          vim.tbl_map(function(line) return line.formatted end, formatted_lines))
         lines = vim.list_extend(lines, formatted_lines)
-        vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, vim.tbl_map(function(line) return line.formatted end, lines))
 
         for index, line in ipairs(lines) do
           local icon_hl_col_0_indexed = #line.whitespace
