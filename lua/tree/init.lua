@@ -61,74 +61,6 @@ M.tree = function(opts)
     error "[tree.nvim] `cwd` is nil"
   end
 
-  local obj = vim.system({ "tree", "-J", "-f", "-a", "--gitignore", }, { cwd = cwd, }):wait()
-  if not obj.stdout then
-    error "[tree.nvim] `tree` command failed to produce a stdout"
-  end
-  local tree_json = vim.json.decode(obj.stdout)
-
-  local curr_bufnr_line = nil
-
-  --- @class Line
-  --- @field formatted string
-  --- @field abs_path string
-  --- @field icon_char string
-  --- @field icon_hl string
-  --- @field indent number
-  --- @field type "file"|"directory"
-
-  --- @type Line[]
-  local lines = {}
-  local max_line_width = 0
-
-  local function indent_lines(json, indent)
-    local indent_chars = (" "):rep(indent)
-    local rel_path = vim.fs.normalize(json.name)
-    local abs_path = vim.fs.joinpath(cwd, rel_path)
-    local basename = vim.fs.basename(rel_path)
-
-
-    if json.type == "file" then
-      local icon_info = get_icon_info { abs_path = abs_path, icon_type = "file", icons_enabled = opts.icons_enabled }
-      local formatted = ("%s%s %s"):format(indent_chars, icon_info.icon_char, basename)
-
-      --- @type Line
-      local line = {
-        abs_path = abs_path,
-        formatted = formatted,
-        icon_hl = icon_info.icon_hl,
-        icon_char = icon_info.icon_char,
-        indent = indent,
-        type = "file"
-      }
-      table.insert(lines, line)
-      max_line_width = math.max(max_line_width, #line.formatted)
-      if abs_path == bufname_abs_path then
-        curr_bufnr_line = #lines
-      end
-    elseif json.type == "directory" then
-      local icon_info = get_icon_info { abs_path = abs_path, icon_type = "directory", icons_enabled = opts.icons_enabled }
-      local formatted = ("%s%s %s/"):format(indent_chars, icon_info.icon_char, basename)
-      --- @type Line
-      local line = {
-        abs_path = abs_path,
-        formatted = formatted,
-        icon_char = icon_info.icon_char,
-        icon_hl = icon_info.icon_hl,
-        indent = indent,
-        type = "directory"
-      }
-      table.insert(lines, line)
-      max_line_width = math.max(max_line_width, #line.formatted)
-
-      if not json.contents then return end
-      for _, file_json in ipairs(json.contents) do
-        indent_lines(file_json, indent + 2)
-      end
-    end
-  end
-
-  indent_lines(tree_json[1], 1)
 
   local tree_bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_set_option_value("buftype", "nofile", { buf = tree_bufnr, })
@@ -137,7 +69,7 @@ M.tree = function(opts)
 
   local border_height = 2
   local tree_winnr = (function()
-    local width = math.min(vim.o.columns, max_line_width + 2)
+    local width = 50
 
     if opts.win_type == "popup" then
       return vim.api.nvim_open_win(tree_bufnr, true, {
@@ -145,7 +77,7 @@ M.tree = function(opts)
         row = 1,
         col = 0,
         width = width,
-        height = math.min(vim.o.lines - 1 - border_height, #lines),
+        height = vim.o.lines - 1 - border_height,
         border = "rounded",
         style = "minimal",
         title = "Tree",
@@ -163,66 +95,137 @@ M.tree = function(opts)
   vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
 
   vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
-  local formatted_lines = vim.tbl_map(function(line) return line.formatted end, lines)
-  vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, formatted_lines)
-  if curr_bufnr_line then
-    vim.api.nvim_win_set_cursor(tree_winnr, { curr_bufnr_line, 0, })
-    vim.api.nvim_buf_set_mark(0, "a", curr_bufnr_line, 0, {})
-  end
-  vim.cmd "normal! ^h"
-  vim.cmd "normal! zz"
 
-  vim.schedule(function()
-    for index, line in ipairs(lines) do
-      local icon_hl_col_0_indexed = line.indent
-      local row_1_indexed = index
-      local row_0_indexed = row_1_indexed - 1
-
-      vim.hl.range(
-        tree_bufnr,
-        ns_id,
-        line.icon_hl,
-        { row_0_indexed, icon_hl_col_0_indexed },
-        { row_0_indexed, icon_hl_col_0_indexed + 1 }
-      )
+  vim.system({ "tree", "-J", "-f", "-a", "--gitignore", }, { cwd = cwd, }, function(obj)
+    if not obj.stdout then
+      error "[tree.nvim] `tree` command failed to produce a stdout"
     end
-  end)
+    local tree_json = vim.json.decode(obj.stdout)
 
-  local close_tree = function()
-    vim.api.nvim_win_close(tree_winnr, true)
-  end
-  local select = function()
-    local line_nr = vim.fn.line "."
-    local line = lines[line_nr]
-    if line.type ~= "file" then return end
+    local curr_bufnr_line = nil
 
-    vim.api.nvim_set_current_win(curr_winnr)
-    vim.cmd("edit " .. vim.trim(line.abs_path))
-  end
+    --- @class Line
+    --- @field formatted string
+    --- @field abs_path string
+    --- @field icon_char string
+    --- @field icon_hl string
+    --- @field indent number
+    --- @field type "file"|"directory"
 
-  local keymap_fns = {
-    ["close-tree"] = close_tree,
-    ["select-close-tree"] = function()
-      select()
-      close_tree()
-    end,
-    ["select-focus-win"] = select,
-    ["select-focus-tree"] = function()
-      local line_nr = vim.fn.line "."
-      local line = lines[line_nr]
-      if line.type ~= "file" then return end
+    --- @type Line[]
+    local lines = {}
+    local max_line_width = 0
 
-      vim.api.nvim_win_call(curr_winnr, function()
+    local function indent_lines(json, indent)
+      local indent_chars = (" "):rep(indent)
+      local rel_path = vim.fs.normalize(json.name)
+      local abs_path = vim.fs.joinpath(cwd, rel_path)
+      local basename = vim.fs.basename(rel_path)
+
+
+      if json.type == "file" then
+        local icon_info = get_icon_info { abs_path = abs_path, icon_type = "file", icons_enabled = opts.icons_enabled }
+        local formatted = ("%s%s %s"):format(indent_chars, icon_info.icon_char, basename)
+
+        --- @type Line
+        local line = {
+          abs_path = abs_path,
+          formatted = formatted,
+          icon_hl = icon_info.icon_hl,
+          icon_char = icon_info.icon_char,
+          indent = indent,
+          type = "file"
+        }
+        table.insert(lines, line)
+        max_line_width = math.max(max_line_width, #line.formatted)
+        if abs_path == bufname_abs_path then
+          curr_bufnr_line = #lines
+        end
+      elseif json.type == "directory" then
+        local icon_info = get_icon_info { abs_path = abs_path, icon_type = "directory", icons_enabled = opts.icons_enabled }
+        local formatted = ("%s%s %s/"):format(indent_chars, icon_info.icon_char, basename)
+        --- @type Line
+        local line = {
+          abs_path = abs_path,
+          formatted = formatted,
+          icon_char = icon_info.icon_char,
+          icon_hl = icon_info.icon_hl,
+          indent = indent,
+          type = "directory"
+        }
+        table.insert(lines, line)
+        max_line_width = math.max(max_line_width, #line.formatted)
+
+        if not json.contents then return end
+        for _, file_json in ipairs(json.contents) do
+          indent_lines(file_json, indent + 2)
+        end
+      end
+    end
+
+    indent_lines(tree_json[1], 1)
+
+    vim.schedule(function()
+      local formatted_lines = vim.tbl_map(function(line) return line.formatted end, lines)
+      vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, formatted_lines)
+      if curr_bufnr_line then
+        vim.api.nvim_win_set_cursor(tree_winnr, { curr_bufnr_line, 0, })
+        vim.api.nvim_buf_set_mark(0, "a", curr_bufnr_line, 0, {})
+      end
+      vim.cmd "normal! ^h"
+      vim.cmd "normal! zz"
+
+      for index, line in ipairs(lines) do
+        local icon_hl_col_0_indexed = line.indent
+        local row_1_indexed = index
+        local row_0_indexed = row_1_indexed - 1
+
+        vim.hl.range(
+          tree_bufnr,
+          ns_id,
+          line.icon_hl,
+          { row_0_indexed, icon_hl_col_0_indexed },
+          { row_0_indexed, icon_hl_col_0_indexed + 1 }
+        )
+      end
+
+      local close_tree = function()
+        vim.api.nvim_win_close(tree_winnr, true)
+      end
+      local select = function()
+        local line_nr = vim.fn.line "."
+        local line = lines[line_nr]
+        if line.type ~= "file" then return end
+
+        vim.api.nvim_set_current_win(curr_winnr)
         vim.cmd("edit " .. vim.trim(line.abs_path))
-      end)
-    end
-  }
+      end
 
-  for key, map in pairs(opts.keymaps) do
-    vim.keymap.set("n", key, function()
-      keymap_fns[map]()
-    end, { buffer = tree_bufnr, })
-  end
+      local keymap_fns = {
+        ["close-tree"] = close_tree,
+        ["select-close-tree"] = function()
+          select()
+          close_tree()
+        end,
+        ["select-focus-win"] = select,
+        ["select-focus-tree"] = function()
+          local line_nr = vim.fn.line "."
+          local line = lines[line_nr]
+          if line.type ~= "file" then return end
+
+          vim.api.nvim_win_call(curr_winnr, function()
+            vim.cmd("edit " .. vim.trim(line.abs_path))
+          end)
+        end
+      }
+
+      for key, map in pairs(opts.keymaps) do
+        vim.keymap.set("n", key, function()
+          keymap_fns[map]()
+        end, { buffer = tree_bufnr, })
+      end
+    end)
+  end)
 end
 
 M.tree({
