@@ -145,6 +145,7 @@ end
 M.tree = function(opts)
   if TREE_INSTANCE and vim.api.nvim_win_is_valid(TREE_INSTANCE) then
     vim.api.nvim_set_current_win(TREE_INSTANCE)
+    vim.cmd "normal! 'a"
     return
   end
 
