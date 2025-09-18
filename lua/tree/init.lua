@@ -191,7 +191,7 @@ M.tree = function(opts)
   vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
   vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, { "Loading..." })
 
-  vim.system({ "tree", "-J", "-f", "-a", "--gitignore", }, { cwd = cwd, }, function(obj)
+  vim.system({ "tree", "-J", "-f", "-a", "--gitignore", "--noreport" }, { cwd = cwd, }, function(obj)
     if not obj.stdout then
       error "[tree.nvim] `tree` command failed to produce a stdout"
     end
