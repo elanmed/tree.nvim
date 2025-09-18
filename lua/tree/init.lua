@@ -90,15 +90,6 @@ local function indent_lines(opts)
 end
 
 --- @param lines FormattedLine[]
-local function get_max_line_width(lines)
-  local max_line_width = 0
-  for _, line in ipairs(lines) do
-    max_line_width = math.max(max_line_width, #line.formatted)
-  end
-  return max_line_width
-end
-
---- @param lines FormattedLine[]
 local function get_curr_buf_line(lines, curr_buf_abs_path)
   for idx, line in ipairs(lines) do
     if line.abs_path == curr_buf_abs_path then return idx end
@@ -142,6 +133,7 @@ end
 --- @field icons_enabled boolean
 --- @field keymaps TreeKeymaps
 --- @field win_type "popup"|"split"
+--- @field win_width number
 
 --- @class TreeKeymaps
 --- @field [string] "close-tree"|"select-focus-win"|"select-focus-tree"|"select-close-tree"
@@ -161,6 +153,7 @@ M.tree = function(opts)
   opts.icons_enabled = default(opts.icons_enabled, true)
   opts.keymaps = default(opts.keymaps, {})
   opts.win_type = default(opts.win_type, "split")
+  opts.win_width = default(opts.win_width, 50)
 
   local curr_winnr = vim.api.nvim_get_current_win()
   local curr_bufnr = vim.api.nvim_get_current_buf()
@@ -176,14 +169,12 @@ M.tree = function(opts)
 
   local border_height = 2
   local tree_winnr = (function()
-    local default_width = 50
-
     if opts.win_type == "popup" then
       return vim.api.nvim_open_win(tree_bufnr, true, {
         relative = "editor",
         row = 1,
         col = 0,
-        width = default_width,
+        width = opts.win_width,
         height = vim.o.lines - 1 - border_height,
         border = "rounded",
         style = "minimal",
@@ -193,7 +184,7 @@ M.tree = function(opts)
 
     return vim.api.nvim_open_win(tree_bufnr, true, {
       split = "left",
-      width = default_width,
+      width = opts.win_width,
       style = "minimal",
     })
   end)()
@@ -210,12 +201,47 @@ M.tree = function(opts)
 
   vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
   vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
-
   vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
-  vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, { "Loading...", })
 
   --- @type FormattedLine[]
   local lines = {}
+
+  local close_tree = function()
+    vim.api.nvim_win_close(tree_winnr, true)
+  end
+
+  local select = function()
+    local line_nr = vim.fn.line "."
+    local line = lines[line_nr]
+    if line.type ~= "file" then return end
+
+    vim.api.nvim_set_current_win(curr_winnr)
+    vim.cmd("edit " .. vim.trim(line.abs_path))
+  end
+
+  local keymap_fns = {
+    ["close-tree"] = close_tree,
+    ["select-close-tree"] = function()
+      select()
+      close_tree()
+    end,
+    ["select-focus-win"] = select,
+    ["select-focus-tree"] = function()
+      local line_nr = vim.fn.line "."
+      local line = lines[line_nr]
+      if line.type ~= "file" then return end
+
+      vim.api.nvim_win_call(curr_winnr, function()
+        vim.cmd("edit " .. vim.trim(line.abs_path))
+      end)
+    end,
+  }
+
+  for key, map in pairs(opts.keymaps) do
+    vim.keymap.set("n", key, function()
+      keymap_fns[map]()
+    end, { buffer = tree_bufnr, })
+  end
 
   vim.system({ "tree", "-f", "-a", "--gitignore", "--noreport", "--charset=ascii", }, {
     cwd = cwd,
@@ -250,52 +276,12 @@ M.tree = function(opts)
     vim.schedule(function()
       vim.api.nvim_set_option_value("modifiable", false, { buf = tree_bufnr, })
 
-      local max_line_width = get_max_line_width(lines)
-      vim.api.nvim_win_set_width(tree_winnr, math.min(vim.o.columns, max_line_width))
-
       local curr_bufnr_line = get_curr_buf_line(lines, bufname_abs_path)
       if curr_bufnr_line then
         vim.api.nvim_win_set_cursor(tree_winnr, { curr_bufnr_line, 0, })
         vim.api.nvim_buf_set_mark(0, "a", curr_bufnr_line, 0, {})
       end
       vim.cmd "normal! zz"
-
-      local close_tree = function()
-        vim.api.nvim_win_close(tree_winnr, true)
-      end
-
-      local select = function()
-        local line_nr = vim.fn.line "."
-        local line = lines[line_nr]
-        if line.type ~= "file" then return end
-
-        vim.api.nvim_set_current_win(curr_winnr)
-        vim.cmd("edit " .. vim.trim(line.abs_path))
-      end
-
-      local keymap_fns = {
-        ["close-tree"] = close_tree,
-        ["select-close-tree"] = function()
-          select()
-          close_tree()
-        end,
-        ["select-focus-win"] = select,
-        ["select-focus-tree"] = function()
-          local line_nr = vim.fn.line "."
-          local line = lines[line_nr]
-          if line.type ~= "file" then return end
-
-          vim.api.nvim_win_call(curr_winnr, function()
-            vim.cmd("edit " .. vim.trim(line.abs_path))
-          end)
-        end,
-      }
-
-      for key, map in pairs(opts.keymaps) do
-        vim.keymap.set("n", key, function()
-          keymap_fns[map]()
-        end, { buffer = tree_bufnr, })
-      end
     end)
   end)
 end
