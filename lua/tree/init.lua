@@ -57,12 +57,10 @@ local function indent_lines(opts)
   local lines = {}
   for _, str in ipairs(opts.chunk) do
     local period_pos = str:find "%."
-    if not period_pos then
-      goto continue
-      -- error "[tree.nvim] Expected a period in the tree output"
-    end
+    if not period_pos then goto continue end
+
     local prefix_length = period_pos - 1
-    local whitespace = string.rep(" ", prefix_length)
+    local whitespace = string.rep(" ", prefix_length / 2)
     local filename = str:sub(period_pos)
 
     local rel_path = vim.fs.normalize(filename)
@@ -194,7 +192,7 @@ M.tree = function(opts)
   --- @type FormattedLine[]
   local lines = {}
 
-  vim.system({ "tree", "-f", "-a", "--gitignore", "--noreport", "--charset=ascii", "-L", "2", }, {
+  vim.system({ "tree", "-f", "-a", "--gitignore", "--noreport", "--charset=ascii", }, {
     cwd = cwd,
     stdout = function(err, data)
       if err then return end
