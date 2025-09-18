@@ -228,11 +228,10 @@ M.tree = function(opts)
         local formatted_lines = format_lines { icons_enabled = opts.icons_enabled, lines = indented_lines, }
         vim.api.nvim_buf_set_lines(tree_bufnr, #lines, -1, false,
           vim.tbl_map(function(line) return line.formatted end, formatted_lines))
-        lines = vim.list_extend(lines, formatted_lines)
 
-        for index, line in ipairs(lines) do
+        for index, line in ipairs(formatted_lines) do
           local icon_hl_col_0_indexed = #line.whitespace
-          local row_1_indexed = index
+          local row_1_indexed = #lines + index
           local row_0_indexed = row_1_indexed - 1
 
           vim.hl.range(
@@ -243,6 +242,8 @@ M.tree = function(opts)
             { row_0_indexed, icon_hl_col_0_indexed + 1, }
           )
         end
+
+        lines = vim.list_extend(lines, formatted_lines)
       end)
     end,
   }, function()
