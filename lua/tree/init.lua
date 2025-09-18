@@ -84,6 +84,8 @@ local function indent_lines(opts)
     }
     table.insert(lines, line)
 
+    coroutine.yield()
+
     ::continue::
   end
   return lines
@@ -118,6 +120,8 @@ local function format_lines(opts)
       icon_hl = icon_info.icon_hl,
     }
     table.insert(formatted_lines, formatted_line)
+
+    coroutine.yield()
   end
 
   return formatted_lines
@@ -250,11 +254,15 @@ M.tree = function(opts)
       if err then return end
       if not data then return end
       local chunk = vim.split(data, "\n")
-      local indented_lines = indent_lines { chunk = chunk, cwd = cwd, }
-      vim.schedule(function()
+
+      local process = coroutine.create(function()
+        local indented_lines = indent_lines { chunk = chunk, cwd = cwd, }
         local formatted_lines = format_lines { icons_enabled = opts.icons_enabled, lines = indented_lines, }
-        vim.api.nvim_buf_set_lines(tree_bufnr, #lines, -1, false,
-          vim.tbl_map(function(line) return line.formatted end, formatted_lines))
+        vim.api.nvim_buf_set_lines(
+          tree_bufnr, #lines, -1, false,
+          vim.tbl_map(function(line) return line.formatted end, formatted_lines)
+        )
+        vim.cmd "redraw"
 
         for index, line in ipairs(formatted_lines) do
           local icon_hl_col_0_indexed = #line.whitespace
@@ -268,10 +276,22 @@ M.tree = function(opts)
             { row_0_indexed, icon_hl_col_0_indexed, },
             { row_0_indexed, icon_hl_col_0_indexed + 1, }
           )
-        end
 
+          coroutine.yield()
+        end
         lines = vim.list_extend(lines, formatted_lines)
       end)
+
+      local function continue_processing()
+        coroutine.resume(process)
+        if coroutine.status(process) == "suspended" then
+          vim.schedule(continue_processing)
+        else
+          print "DONE"
+        end
+      end
+
+      continue_processing()
     end,
   }, function()
     vim.schedule(function()
