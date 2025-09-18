@@ -192,6 +192,15 @@ M.tree = function(opts)
   end)()
   TREE_INSTANCE = tree_winnr
 
+  vim.api.nvim_create_autocmd("WinEnter", {
+    callback = function()
+      if not vim.api.nvim_win_is_valid(tree_winnr) then return end
+      if vim.api.nvim_get_current_win() ~= tree_winnr then return end
+      if vim.api.nvim_get_current_buf() == tree_bufnr then return end
+      vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
+    end,
+  })
+
   vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
   vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
 
