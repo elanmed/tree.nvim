@@ -132,6 +132,11 @@ local function format_lines(opts)
   return formatted_lines
 end
 
+--- @param mark_name string
+local function is_buffer_mark_unset(mark_name)
+  local mark = vim.api.nvim_buf_get_mark(0, mark_name)
+  return mark[1] == 0 and mark[2] == 0
+end
 
 --- @class TreeOpts
 --- @field icons_enabled boolean
@@ -145,7 +150,10 @@ end
 M.tree = function(opts)
   if TREE_INSTANCE and vim.api.nvim_win_is_valid(TREE_INSTANCE) then
     vim.api.nvim_set_current_win(TREE_INSTANCE)
-    vim.cmd "normal! 'a"
+    local is_mark_set = not is_buffer_mark_unset "a"
+    if is_mark_set then
+      vim.cmd "normal! 'a"
+    end
     return
   end
 
