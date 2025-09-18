@@ -292,13 +292,13 @@ M.tree = function(opts)
   end)
 end
 
-M.tree {
-  keymaps = {
-    ["<cr>"] = "select-close-tree",
-    ["o"] = "select-focus-win",
-    ["t"] = "select-focus-tree",
-    ["q"] = "close-tree",
-  },
-}
+-- M.tree {
+--   keymaps = {
+--     ["<cr>"] = "select-close-tree",
+--     ["o"] = "select-focus-win",
+--     ["t"] = "select-focus-tree",
+--     ["q"] = "close-tree",
+--   },
+-- }
 
 return M
