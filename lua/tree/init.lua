@@ -2,6 +2,8 @@ local M = {}
 
 local ns_id = vim.api.nvim_create_namespace "Tree"
 
+local TREE_INSTANCE = nil
+
 --- @generic T
 --- @param val T | nil
 --- @param default_val T
@@ -141,6 +143,11 @@ end
 
 --- @param opts TreeOpts
 M.tree = function(opts)
+  if TREE_INSTANCE and vim.api.nvim_win_is_valid(TREE_INSTANCE) then
+    vim.api.nvim_set_current_win(TREE_INSTANCE)
+    return
+  end
+
   opts = default(opts, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
   opts.keymaps = default(opts.keymaps, {})
@@ -182,6 +189,7 @@ M.tree = function(opts)
       style = "minimal",
     })
   end)()
+  TREE_INSTANCE = tree_winnr
 
   vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
   vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
@@ -272,13 +280,13 @@ M.tree = function(opts)
   end)
 end
 
--- M.tree {
---   keymaps = {
---     ["<cr>"] = "select-close-tree",
---     ["o"] = "select-focus-win",
---     ["t"] = "select-focus-tree",
---     ["q"] = "close-tree",
---   },
--- }
+M.tree {
+  keymaps = {
+    ["<cr>"] = "select-close-tree",
+    ["o"] = "select-focus-win",
+    ["t"] = "select-focus-tree",
+    ["q"] = "close-tree",
+  },
+}
 
 return M
