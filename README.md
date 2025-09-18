@@ -14,6 +14,7 @@ Works fine, API may change
 --- @field icons_enabled boolean
 --- @field keymaps TreeKeymaps
 --- @field win_type "popup"|"split"
+--- @field win_width number
 
 --- @class TreeKeymaps
 --- @field [string] "close-tree"|"select-focus-win"|"select-close-tree"|"select-focus-tree"
@@ -28,6 +29,7 @@ require "tree".tree({
   -- defaults to:
   icons_enabled = true,
   win_type = "split",
+  win_width = 50,
   -- no keymaps are set by default
   keymaps = {
     ["<cr>"] = "select-close-tree",
