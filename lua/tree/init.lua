@@ -40,7 +40,7 @@ end
 
 --- @class IndentedLine
 --- @field abs_path string
---- @field indent number
+--- @field whitespace string
 --- @field type "file"|"directory"
 
 --- @class FormattedLine : IndentedLine
@@ -49,42 +49,43 @@ end
 --- @field icon_hl string
 
 --- @class IndentLinesOpts
---- @field json string
---- @field indent number
+--- @field chunk string[]
 --- @field cwd string
 --- @param opts IndentLinesOpts
 local function indent_lines(opts)
   --- @type IndentedLine[]
   local lines = {}
-  local function _indent_lines(json, indent)
-    local rel_path = vim.fs.normalize(json.name)
+  for _, str in ipairs(opts.chunk) do
+    local subbed = str
+    subbed = subbed:gsub("├──", " ")
+    subbed = subbed:gsub("└──", " ")
+    subbed = subbed:gsub("│  ", " ")
+    subbed = subbed:gsub("│", " ")
+    subbed = subbed:gsub("[%c\128-\255]", function(c)
+      return c == " " and c or ""
+    end)
+    local whitespace = subbed:match "^%s*"
+    local filename = vim.trim(subbed)
+
+    local rel_path = vim.fs.normalize(filename)
     local abs_path = vim.fs.joinpath(opts.cwd, rel_path)
 
-    if json.type == "file" then
-      --- @type IndentedLine
-      local line = {
-        abs_path = abs_path,
-        indent = indent,
-        type = "file"
-      }
-      table.insert(lines, line)
-    elseif json.type == "directory" then
-      --- @type IndentedLine
-      local line = {
-        abs_path = abs_path,
-        indent = indent,
-        type = "directory"
-      }
-      table.insert(lines, line)
-
-      if not json.contents then return end
-      for _, file_json in ipairs(json.contents) do
-        _indent_lines(file_json, indent + 1)
+    local type = (function()
+      local stat_res = vim.uv.fs_stat(abs_path)
+      if not stat_res then
+        return "file"
       end
-    end
-  end
+      return stat_res.type
+    end)()
 
-  _indent_lines(opts.json, 0)
+    --- @type IndentedLine
+    local line = {
+      whitespace = whitespace,
+      abs_path = abs_path,
+      type = type,
+    }
+    table.insert(lines, line)
+  end
   return lines
 end
 
@@ -113,18 +114,17 @@ local function format_lines(opts)
   local formatted_lines = {}
   for _, indented_line in ipairs(opts.lines) do
     local basename = vim.fs.basename(indented_line.abs_path)
-    local indent_chars = ("  "):rep(indented_line.indent)
-    local icon_info = get_icon_info { abs_path = indented_line.abs_path, icon_type = indented_line.type, icons_enabled = opts.icons_enabled }
-    local formatted = ("%s%s %s"):format(indent_chars, icon_info.icon_char, basename)
+    local icon_info = get_icon_info { abs_path = indented_line.abs_path, icon_type = indented_line.type, icons_enabled = opts.icons_enabled, }
+    local formatted = ("%s%s %s"):format(indented_line.whitespace, icon_info.icon_char, basename)
 
     --- @type FormattedLine
     local formatted_line = {
       abs_path = indented_line.abs_path,
-      indent = indented_line.indent,
+      whitespace = indented_line.whitespace,
       type = indented_line.type,
       formatted = formatted,
       icon_char = icon_info.icon_char,
-      icon_hl = icon_info.icon_hl
+      icon_hl = icon_info.icon_hl,
     }
     table.insert(formatted_lines, formatted_line)
   end
@@ -189,21 +189,48 @@ M.tree = function(opts)
   vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
 
   vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
-  vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, { "Loading..." })
+  vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, { "Loading...", })
 
-  vim.system({ "tree", "-J", "-f", "-a", "--gitignore", "--noreport" }, { cwd = cwd, }, function(obj)
-    if not obj.stdout then
-      error "[tree.nvim] `tree` command failed to produce a stdout"
-    end
+  --- @type FormattedLine[]
+  local lines = {}
 
+  vim.system({ "tree", "-f", "-a", "--gitignore", "--noreport", "--charset=utf-8", }, {
+    cwd = cwd,
+    stdout = function(err, data)
+      if err then return end
+      if not data then return end
+      local chunk = vim.split(data, "\n")
+      local indented_lines = indent_lines { chunk = chunk, cwd = cwd, }
+      vim.schedule(function()
+        local formatted_lines = format_lines { icons_enabled = opts.icons_enabled, lines = indented_lines, }
+
+        lines = vim.list_extend(lines, formatted_lines)
+        vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false,
+          vim.tbl_map(function(line) return line.formatted end, formatted_lines)
+        )
+
+        vim.schedule(function()
+          for index, line in ipairs(lines) do
+            local icon_hl_col_0_indexed = #line.whitespace
+            local row_1_indexed = index
+            local row_0_indexed = row_1_indexed - 1
+
+            vim.hl.range(
+              tree_bufnr,
+              ns_id,
+              line.icon_hl,
+              { row_0_indexed, icon_hl_col_0_indexed, },
+              { row_0_indexed, icon_hl_col_0_indexed + 1, }
+            )
+          end
+        end)
+      end)
+    end,
+  }, function()
     vim.schedule(function()
-      local tree_json = vim.json.decode(obj.stdout)
-      local indented_lines = indent_lines({ cwd = cwd, indent = 0, json = tree_json[1] })
-      local lines = format_lines({ icons_enabled = opts.icons_enabled, lines = indented_lines })
+      print()
       local max_line_width = get_max_line_width(lines)
       vim.api.nvim_win_set_width(tree_winnr, math.min(vim.o.columns, max_line_width))
-
-      vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, vim.tbl_map(function(line) return line.formatted end, lines))
 
       local curr_bufnr_line = get_curr_buf_line(lines, bufname_abs_path)
       if curr_bufnr_line then
@@ -213,23 +240,11 @@ M.tree = function(opts)
       vim.cmd "normal! ^h"
       vim.cmd "normal! zz"
 
-      for index, line in ipairs(lines) do
-        local icon_hl_col_0_indexed = line.indent
-        local row_1_indexed = index
-        local row_0_indexed = row_1_indexed - 1
-
-        vim.hl.range(
-          tree_bufnr,
-          ns_id,
-          line.icon_hl,
-          { row_0_indexed, icon_hl_col_0_indexed },
-          { row_0_indexed, icon_hl_col_0_indexed + 1 }
-        )
-      end
 
       local close_tree = function()
         vim.api.nvim_win_close(tree_winnr, true)
       end
+
       local select = function()
         local line_nr = vim.fn.line "."
         local line = lines[line_nr]
@@ -254,7 +269,7 @@ M.tree = function(opts)
           vim.api.nvim_win_call(curr_winnr, function()
             vim.cmd("edit " .. vim.trim(line.abs_path))
           end)
-        end
+        end,
       }
 
       for key, map in pairs(opts.keymaps) do
@@ -266,13 +281,13 @@ M.tree = function(opts)
   end)
 end
 
-M.tree({
-  keymaps = {
-    ["<cr>"] = "select-close-tree",
-    ["o"] = "select-focus-win",
-    ["t"] = "select-focus-tree",
-    ["q"] = "close-tree"
-  }
-})
+-- M.tree {
+--   keymaps = {
+--     ["<cr>"] = "select-close-tree",
+--     ["o"] = "select-focus-win",
+--     ["t"] = "select-focus-tree",
+--     ["q"] = "close-tree",
+--   },
+-- }
 
 return M
