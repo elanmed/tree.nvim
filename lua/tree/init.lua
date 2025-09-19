@@ -264,16 +264,22 @@ M.tree = function(opts)
         if err then return end
         if not data then return end
         vim.schedule(function()
+          --- @type FormattedLine[]
           local formatted_lines = {}
 
           local chunk = vim.split(data, "\n")
-          for idx, str in ipairs(chunk) do
+          for _, str in ipairs(chunk) do
             local formatted_line = get_formatted_line { cwd = cwd, icons_enabled = opts.icons_enabled, str = str, }
-            if formatted_line == nil then goto continue end
-            table.insert(formatted_lines, formatted_line)
+            if formatted_line then table.insert(formatted_lines, formatted_line) end
+          end
 
-            vim.api.nvim_buf_set_lines(tree_bufnr, #TREE_CACHE + idx - 1, -1, false, { formatted_line.formatted, })
+          vim.api.nvim_buf_set_lines(
+            tree_bufnr, #TREE_CACHE, -1, false,
+            vim.tbl_map(function(formatted_line) return formatted_line.formatted end, formatted_lines)
+          )
+          vim.cmd "redraw"
 
+          for idx, formatted_line in ipairs(formatted_lines) do
             local icon_hl_col_0_indexed = #formatted_line.whitespace
             local row_1_indexed = #TREE_CACHE + idx
             local row_0_indexed = row_1_indexed - 1
@@ -285,9 +291,6 @@ M.tree = function(opts)
               { row_0_indexed, icon_hl_col_0_indexed, },
               { row_0_indexed, icon_hl_col_0_indexed + 1, }
             )
-            vim.cmd "redraw"
-
-            ::continue::
           end
 
           TREE_CACHE = vim.list_extend(TREE_CACHE, formatted_lines)
