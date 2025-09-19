@@ -84,7 +84,6 @@ local function indent_lines(opts)
     }
     table.insert(lines, line)
 
-    coroutine.yield()
 
     ::continue::
   end
@@ -120,8 +119,6 @@ local function format_lines(opts)
       icon_hl = icon_info.icon_hl,
     }
     table.insert(formatted_lines, formatted_line)
-
-    coroutine.yield()
   end
 
   return formatted_lines
@@ -206,7 +203,6 @@ M.tree = function(opts)
   vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
   vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
   vim.api.nvim_win_set_buf(tree_winnr, tree_bufnr)
-  vim.api.nvim_buf_set_lines(tree_bufnr, 0, -1, false, { "Loading...", })
 
   --- @type FormattedLine[]
   local lines = {}
@@ -253,49 +249,69 @@ M.tree = function(opts)
     stdout = function(err, data)
       if err then return end
       if not data then return end
-      local chunk = vim.split(data, "\n")
+      vim.schedule(function()
+        local formatted_lines = {}
 
-      local process = coroutine.create(function()
-        local indented_lines = indent_lines { chunk = chunk, cwd = cwd, }
-        local formatted_lines = format_lines { icons_enabled = opts.icons_enabled, lines = indented_lines, }
-        vim.api.nvim_buf_set_lines(
-          tree_bufnr, #lines, -1, false,
-          vim.tbl_map(function(line) return line.formatted end, formatted_lines)
-        )
-        vim.cmd "redraw"
+        local chunk = vim.split(data, "\n")
+        for idx, str in ipairs(chunk) do
+          local period_pos = str:find "%."
+          if not period_pos then goto continue end
 
-        for index, line in ipairs(formatted_lines) do
-          local icon_hl_col_0_indexed = #line.whitespace
-          local row_1_indexed = #lines + index
+          local prefix_length = period_pos - 1
+          local whitespace = string.rep(" ", prefix_length / 2)
+          local filename = str:sub(period_pos)
+
+          local rel_path = vim.fs.normalize(filename)
+          local abs_path = vim.fs.joinpath(cwd, rel_path)
+
+          local type = (function()
+            local stat_res = vim.uv.fs_stat(abs_path)
+            if not stat_res then
+              return "file"
+            end
+            return stat_res.type
+          end)()
+
+          local basename = vim.fs.basename(abs_path)
+          local icon_info = get_icon_info { abs_path = abs_path, icon_type = type, icons_enabled = opts.icons_enabled, }
+          local formatted = ("%s%s %s"):format(whitespace, icon_info.icon_char, basename)
+
+          --- @type FormattedLine
+          local formatted_line = {
+            whitespace = whitespace,
+            abs_path = abs_path,
+            type = type,
+            formatted = formatted,
+            icon_char = icon_info.icon_char,
+            icon_hl = icon_info.icon_hl,
+
+          }
+          table.insert(formatted_lines, formatted_line)
+
+          vim.api.nvim_buf_set_lines(tree_bufnr, #lines + idx - 1, -1, false, { formatted, })
+
+          local icon_hl_col_0_indexed = #whitespace
+          local row_1_indexed = #lines + idx
           local row_0_indexed = row_1_indexed - 1
 
           vim.hl.range(
             tree_bufnr,
             ns_id,
-            line.icon_hl,
+            icon_info.icon_hl,
             { row_0_indexed, icon_hl_col_0_indexed, },
             { row_0_indexed, icon_hl_col_0_indexed + 1, }
           )
+          vim.cmd "redraw"
 
-          coroutine.yield()
+          ::continue::
         end
+
         lines = vim.list_extend(lines, formatted_lines)
       end)
-
-      local function continue_processing()
-        coroutine.resume(process)
-        if coroutine.status(process) == "suspended" then
-          vim.schedule(continue_processing)
-        else
-          print "DONE"
-        end
-      end
-
-      continue_processing()
     end,
   }, function()
     vim.schedule(function()
-      vim.api.nvim_set_option_value("modifiable", false, { buf = tree_bufnr, })
+      -- vim.api.nvim_set_option_value("modifiable", false, { buf = tree_bufnr, })
 
       local curr_bufnr_line = get_curr_buf_line(lines, bufname_abs_path)
       if curr_bufnr_line then
