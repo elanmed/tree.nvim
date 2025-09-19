@@ -8,6 +8,16 @@ Works fine, API may change
 
 ## API
 
+### `setup`
+
+```lua
+--- @class PopulateTreeCacheOpts
+--- @field cwd string
+--- @field icons_enabled boolean
+--- @param opts PopulateTreeCacheOpts
+M.setup = function(opts) end
+```
+
 ### `tree`
 ```lua
 --- @class TreeOpts

@@ -1,10 +1,11 @@
-*tree.txt*                                      Last change: 2025 September 17
+*tree.txt*                                      Last change: 2025 September 18
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
 
 Status ......................................................... |tree-status|
 API ............................................................... |tree-api|
+`setup` ......................................................... |tree-setup|
 `tree` ........................................................... |tree-tree|
 Example config ......................................... |tree-example-config|
 
@@ -26,6 +27,17 @@ Works fine, API may change
 API                                                                 *tree-api*
 
 
+
+                                                                              
+`SETUP`                                                           *tree-setup*
+
+>lua
+    --- @class PopulateTreeCacheOpts
+    --- @field cwd string
+    --- @field icons_enabled boolean
+    --- @param opts PopulateTreeCacheOpts
+    M.setup = function(opts) end
+<
 
                                                                               
 `TREE`                                                             *tree-tree*
