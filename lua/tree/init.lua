@@ -115,7 +115,12 @@ M.tree = function(opts)
   end)()
 
   local curr_bufname_abs_path = vim.api.nvim_buf_get_name(opts.curr_bufnr)
-  local curr_dir = vim.fs.dirname(curr_bufname_abs_path)
+  local curr_dir = (function()
+    if vim.fn.isdirectory(curr_bufname_abs_path) == vimscript_true then
+      return curr_bufname_abs_path
+    end
+    return vim.fs.dirname(curr_bufname_abs_path)
+  end)()
   opts.tree_dir = default(opts.tree_dir, curr_dir)
 
   opts.tree_bufnr = (function()
