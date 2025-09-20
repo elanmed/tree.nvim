@@ -11,13 +11,11 @@ In progress, API will change
 ### `tree`
 ```lua
 --- @class TreeKeymaps
---- @field [string] "close-tree"|"select"|"out-cwd"|"in-cwd"|"inc-limit"|"dec-limit"
+--- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-limit"|"dec-limit"
 
 --- @class TreeOpts
 --- @field tree_dir? string
 --- @field limit? number
---- @field tree_bufnr? number
---- @field tree_winnr? number
 --- @field keymaps TreeKeymaps
 --- @param opts? TreeOpts
 M.tree = function(opts) end
@@ -26,13 +24,18 @@ M.tree = function(opts) end
 ## Example config
 ```lua
 require "tree".tree({
+  -- defaults to
+  tree_dir = "[the directory of the current buffer]",
+  limit = 1,
   -- no keymaps are set by default
   keymaps = {
     ["<cr>"] = "select",
-    ["q"] = "close-tree"
-    ["<esc>"] = "close-tree"
+    ["q"] = "close-tree",
+    ["<esc>"] = "close-tree",
     ["<"] = "dec-limit",
     [">"] = "inc-limit",
+    ["H"] = "out-dir",
+    ["L"] = "in-dir",
   }
 })
 ```

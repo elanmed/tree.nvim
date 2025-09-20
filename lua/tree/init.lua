@@ -1,5 +1,8 @@
 local M = {}
 
+local vimscript_true = 1
+local vimscript_false = 0
+
 --- @generic T
 --- @param val T | nil
 --- @param default_val T
@@ -17,7 +20,7 @@ end
 --- @field formatted string
 
 --- @class TreeKeymaps
---- @field [string] "close-tree"|"select"|"out-cwd"|"in-cwd"|"inc-limit"|"dec-limit"
+--- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-limit"|"dec-limit"
 
 --- @class TreeOpts
 --- @field tree_dir? string
@@ -97,8 +100,8 @@ M.tree = function(opts)
   local width_padding = 1
 
   opts.tree_winnr = (function()
-    local width = max_line_width + width_padding
-    local title = ("tree -L %s"):format(opts.limit)
+    local title = ("tree %s -L %s"):format(vim.fs.basename(opts.tree_dir), opts.limit)
+    local width = math.max(#title, max_line_width + width_padding)
     if opts.tree_winnr then
       vim.api.nvim_win_set_width(opts.tree_winnr, width)
       vim.api.nvim_win_set_height(opts.tree_winnr, #lines)
@@ -145,8 +148,36 @@ M.tree = function(opts)
     }
   end
 
-  vim.keymap.set("n", "<", dec_limit, { buffer = opts.tree_bufnr, })
-  vim.keymap.set("n", ">", inc_limit, { buffer = opts.tree_bufnr, })
+  local function out_dir()
+    M.tree {
+      limit = opts.limit + 1,
+      tree_bufnr = opts.tree_bufnr,
+      tree_dir = vim.fs.dirname(opts.tree_dir),
+      tree_winnr = opts.tree_winnr,
+      keymaps = opts.keymaps,
+    }
+  end
+
+  local function in_dir()
+    local line_nr = vim.fn.line "."
+    local line = lines[line_nr]
+
+    local in_tree_dir = (function()
+      if vim.fn.isdirectory(line.abs_path) == vimscript_true then
+        return line.abs_path
+      elseif vim.fn.filereadable(line.abs_path) == vimscript_true then
+        return vim.fs.dirname(line.abs_path)
+      end
+    end)()
+
+    M.tree {
+      limit = opts.limit,
+      tree_bufnr = opts.tree_bufnr,
+      tree_dir = in_tree_dir,
+      tree_winnr = opts.tree_winnr,
+      keymaps = opts.keymaps,
+    }
+  end
 
   local close_tree = function()
     vim.api.nvim_win_close(opts.tree_winnr, true)
@@ -155,7 +186,10 @@ M.tree = function(opts)
   local select = function()
     local line_nr = vim.fn.line "."
     local line = lines[line_nr]
-    -- if line.type ~= "file" then return end
+
+    if vim.fn.filereadable(line.abs_path) == vimscript_false then
+      return
+    end
 
     vim.api.nvim_set_current_win(curr_winnr)
     vim.cmd("edit " .. line.abs_path)
@@ -169,6 +203,8 @@ M.tree = function(opts)
     end,
     ["inc-limit"] = inc_limit,
     ["dec-limit"] = dec_limit,
+    ["out-dir"] = out_dir,
+    ["in-dir"] = in_dir,
   }
 
   for key, map in pairs(opts.keymaps) do
@@ -177,17 +213,5 @@ M.tree = function(opts)
     end, { buffer = opts.tree_bufnr, })
   end
 end
-
--- vim.keymap.set("n", "<leader>g", function()
---   M.tree {
---     keymaps = {
---       q = "close-tree",
---       ["<Esc>"] = "close-tree",
---       ["<CR>"] = "select",
---       ["<"] = "dec-limit",
---       [">"] = "inc-limit",
---     },
---   }
--- end)
 
 return M
