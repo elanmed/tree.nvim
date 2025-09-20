@@ -94,6 +94,10 @@ M.tree = function(opts)
     { cwd = opts.tree_dir, }
   ):wait()
 
+  if obj.code ~= 0 then
+    error "[tree.nvim] `tree` exit code was not `0`"
+  end
+
   if not obj.stdout then
     error "[tree.nvim] no stdout from `tree`"
   end
@@ -107,9 +111,13 @@ M.tree = function(opts)
   local curr_bufname_abs_path_line = nil
 
   for idx, str in ipairs(vim.split(obj.stdout, "\n")) do
+    if str == "" then
+      goto continue
+    end
+
     local period_pos = str:find "%."
     if not period_pos then
-      goto continue
+      error "[tree.nvim] malformed stdout, expected each line to start with a `.`"
     end
 
     local prefix_length = period_pos - 1
@@ -303,19 +311,5 @@ M.tree = function(opts)
     end, { buffer = opts.tree_bufnr, })
   end
 end
-
--- vim.keymap.set("n", "<leader>g", function()
---   M.tree {
---     keymaps = {
---       ["<cr>"] = "select",
---       ["q"] = "close-tree",
---       ["<esc>"] = "close-tree",
---       ["<"] = "dec-limit",
---       [">"] = "inc-limit",
---       ["H"] = "out-dir",
---       ["L"] = "in-dir",
---     },
---   }
--- end)
 
 return M
