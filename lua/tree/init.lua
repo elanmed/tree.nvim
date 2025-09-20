@@ -27,6 +27,7 @@ end
 --- @field limit? number
 --- @field tree_bufnr? number
 --- @field tree_winnr? number
+--- @field prev_cursor_abs_path? string
 --- @field keymaps TreeKeymaps
 --- @param opts? TreeOpts
 M.tree = function(opts)
@@ -36,8 +37,8 @@ M.tree = function(opts)
 
   local curr_winnr = vim.api.nvim_get_current_win()
   local curr_bufnr = vim.api.nvim_get_current_buf()
-  local bufname_abs_path = vim.api.nvim_buf_get_name(curr_bufnr)
-  local curr_dir = vim.fs.dirname(bufname_abs_path)
+  local curr_bufname_abs_path = vim.api.nvim_buf_get_name(curr_bufnr)
+  local curr_dir = vim.fs.dirname(curr_bufname_abs_path)
   opts.tree_dir = default(opts.tree_dir, curr_dir)
 
   opts.tree_bufnr = (function()
@@ -66,8 +67,10 @@ M.tree = function(opts)
   --- @type string[]
   local formatted_lines = {}
   local max_line_width = 0
+  local prev_cursor_abs_path_line = nil
+  local curr_bufname_abs_path_line = nil
 
-  for _, str in ipairs(vim.split(obj.stdout, "\n")) do
+  for idx, str in ipairs(vim.split(obj.stdout, "\n")) do
     local period_pos = str:find "%."
     if not period_pos then
       goto continue
@@ -79,6 +82,12 @@ M.tree = function(opts)
 
     local rel_path = vim.fs.normalize(filename)
     local abs_path = vim.fs.joinpath(opts.tree_dir, rel_path)
+    if abs_path == opts.prev_cursor_abs_path then
+      prev_cursor_abs_path_line = idx
+    end
+    if abs_path == curr_bufname_abs_path then
+      curr_bufname_abs_path_line = idx
+    end
     local basename = vim.fs.basename(abs_path)
     local formatted = whitespace .. basename
     max_line_width = math.max(max_line_width, #formatted)
@@ -97,7 +106,7 @@ M.tree = function(opts)
 
   vim.api.nvim_buf_set_lines(opts.tree_bufnr, 0, -1, false, formatted_lines)
 
-  local width_padding = 1
+  local width_padding = 10
 
   opts.tree_winnr = (function()
     local title = ("tree %s/ -L %s"):format(vim.fs.basename(opts.tree_dir), opts.limit)
@@ -127,6 +136,23 @@ M.tree = function(opts)
   end)()
   vim.api.nvim_win_set_buf(opts.tree_winnr, opts.tree_bufnr)
 
+  if curr_bufname_abs_path_line then
+    vim.api.nvim_buf_set_mark(opts.tree_bufnr, "a", curr_bufname_abs_path_line, 0, {})
+  end
+
+  if prev_cursor_abs_path_line then
+    vim.cmd "normal! gg"
+    vim.api.nvim_win_set_cursor(opts.tree_winnr, { prev_cursor_abs_path_line, 0, })
+  elseif curr_bufname_abs_path_line then
+    vim.cmd "normal! 'a"
+  end
+
+  local function get_cursor_abs_path()
+    local line_nr = vim.fn.line "."
+    local line = lines[line_nr]
+    return line.abs_path
+  end
+
   local function inc_limit()
     M.tree {
       limit = opts.limit + 1,
@@ -134,6 +160,7 @@ M.tree = function(opts)
       tree_dir = opts.tree_dir,
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
+      prev_cursor_abs_path = get_cursor_abs_path(),
     }
   end
 
@@ -148,6 +175,7 @@ M.tree = function(opts)
       tree_dir = opts.tree_dir,
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
+      prev_cursor_abs_path = get_cursor_abs_path(),
     }
   end
 
@@ -158,6 +186,7 @@ M.tree = function(opts)
       tree_dir = vim.fs.dirname(opts.tree_dir),
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
+      prev_cursor_abs_path = get_cursor_abs_path(),
     }
   end
 
@@ -179,6 +208,7 @@ M.tree = function(opts)
       tree_dir = in_tree_dir,
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
+      prev_cursor_abs_path = get_cursor_abs_path(),
     }
   end
 
@@ -229,4 +259,5 @@ end
 --     },
 --   }
 -- end)
+
 return M
