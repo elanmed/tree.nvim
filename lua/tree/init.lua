@@ -46,6 +46,31 @@ local get_icon_info = function(opts)
   }
 end
 
+--- @param winnr number
+local save_minimal_opts = function(winnr)
+  -- :help nvim_open_win
+  local minimal_opts_to_save = {
+    "number", "relativenumber", "cursorline", "cursorcolumn",
+    "foldcolumn", "spell", "list", "signcolumn", "colorcolumn",
+    "statuscolumn", "fillchars", "winhighlight",
+  }
+
+  local saved_minimal_opts = {}
+  for _, opt in ipairs(minimal_opts_to_save) do
+    saved_minimal_opts[opt] = vim.api.nvim_get_option_value(opt, { win = winnr, })
+  end
+
+  return saved_minimal_opts
+end
+
+--- @param winnr number
+--- @param opts vim.wo
+local set_opts = function(winnr, opts)
+  for opt, value in pairs(opts) do
+    vim.api.nvim_set_option_value(opt, value, { win = winnr, })
+  end
+end
+
 --- @class Line
 --- @field whitespace string
 --- @field abs_path string
@@ -61,6 +86,7 @@ end
 --- @field limit? number
 --- @field tree_bufnr? number
 --- @field tree_winnr? number
+--- @field tree_win_opts? table
 --- @field curr_winnr? number
 --- @field curr_bufnr? number
 --- @field prev_cursor_abs_path? string
@@ -208,6 +234,8 @@ M.tree = function(opts)
     })
     vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
     vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
+    vim.api.nvim_set_option_value("signcolumn", "yes", { win = tree_winnr, })
+    opts.tree_win_opts = save_minimal_opts(opts.tree_winnr)
     return tree_winnr
   end)()
   vim.api.nvim_win_set_buf(opts.tree_winnr, opts.tree_bufnr)
@@ -247,6 +275,7 @@ M.tree = function(opts)
       icons_enabled = opts.icons_enabled,
       curr_bufnr = opts.curr_bufnr,
       curr_winnr = opts.curr_winnr,
+      tree_win_opts = opts.tree_win_opts,
     }
   end
 
@@ -321,6 +350,18 @@ M.tree = function(opts)
       keymap_fns[map]()
     end, { buffer = opts.tree_bufnr, })
   end
+
+  vim.api.nvim_create_autocmd("BufEnter", {
+    callback = function()
+      if not vim.api.nvim_win_is_valid(opts.tree_winnr) then return end
+      if vim.api.nvim_get_current_win() ~= opts.tree_winnr then return end
+      if vim.api.nvim_get_current_buf() ~= opts.tree_bufnr then
+        vim.api.nvim_win_set_buf(opts.tree_winnr, opts.tree_bufnr)
+      end
+      -- FIXME this isn't working
+      set_opts(opts.tree_winnr, opts.tree_win_opts)
+    end,
+  })
 end
 
 return M
