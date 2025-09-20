@@ -218,7 +218,7 @@ M.tree = function(opts)
     local editor_height = vim.o.lines - 1
     local height = math.max(
       1,
-      math.min(math.max(1, #lines), editor_height) - border_height
+      math.min(math.max(1, #lines), editor_height - border_height)
     )
 
     if opts.tree_winnr then
