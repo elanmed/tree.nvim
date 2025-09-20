@@ -4,48 +4,35 @@ A barebones, read-only file tree using the `tree` cli
 
 ## Status
 
-Works fine, API may change
+In progress, API will change
 
 ## API
 
-### `setup`
-
-```lua
---- @class PopulateTreeCacheOpts
---- @field cwd string
---- @field icons_enabled boolean
---- @param opts PopulateTreeCacheOpts
-M.setup = function(opts) end
-```
-
 ### `tree`
 ```lua
---- @class TreeOpts
---- @field icons_enabled boolean
---- @field keymaps TreeKeymaps
---- @field win_type "popup"|"split"
---- @field win_width number
-
 --- @class TreeKeymaps
---- @field [string] "close-tree"|"select-focus-win"|"select-close-tree"|"select-focus-tree"
+--- @field [string] "close-tree"|"select"|"out-cwd"|"in-cwd"|"inc-limit"|"dec-limit"
 
---- @param opts TreeOpts
+--- @class TreeOpts
+--- @field tree_dir? string
+--- @field limit? number
+--- @field tree_bufnr? number
+--- @field tree_winnr? number
+--- @field keymaps TreeKeymaps
+--- @param opts? TreeOpts
 M.tree = function(opts) end
 ```
 
 ## Example config
 ```lua
 require "tree".tree({
-  -- defaults to:
-  icons_enabled = true,
-  win_type = "split",
-  win_width = 50,
   -- no keymaps are set by default
   keymaps = {
-    ["<cr>"] = "select-close-tree",
-    ["t"] = "select-focus-tree",
-    ["o"] = "select-focus-win",
+    ["<cr>"] = "select",
     ["q"] = "close-tree"
+    ["<esc>"] = "close-tree"
+    ["<"] = "dec-limit",
+    [">"] = "inc-limit",
   }
 })
 ```
