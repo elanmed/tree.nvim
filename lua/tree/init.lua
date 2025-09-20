@@ -3,6 +3,8 @@ local M = {}
 local vimscript_true = 1
 local vimscript_false = 0
 
+local ns_id = vim.api.nvim_create_namespace "Tree"
+
 --- @generic T
 --- @param val T | nil
 --- @param default_val T
@@ -14,10 +16,42 @@ local default = function(val, default_val)
   return val
 end
 
+--- @class GetIconInfoOpts
+--- @field icons_enabled boolean
+--- @field abs_path string
+--- @param opts GetIconInfoOpts
+local get_icon_info = function(opts)
+  if not opts.icons_enabled then
+    return {
+      icon_char = "",
+      icon_hl = nil,
+    }
+  end
+  local mini_icons_ok, mini_icons = pcall(require, "mini.icons")
+  if not mini_icons_ok then
+    error "[tree.nvim] `mini.icons` is required when `icons_enabled` is `true`"
+  end
+
+  local icon_type = (function()
+    if vim.fn.isdirectory(opts.abs_path) == vimscript_true then
+      return "directory"
+    end
+    return "file"
+  end)()
+  local icon_char, icon_hl = mini_icons.get(icon_type, opts.abs_path)
+
+  return {
+    icon_char = icon_char,
+    icon_hl = icon_hl,
+  }
+end
+
 --- @class Line
 --- @field whitespace string
 --- @field abs_path string
 --- @field formatted string
+--- @field icon_char string
+--- @field icon_hl string
 
 --- @class TreeKeymaps
 --- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-limit"|"dec-limit"
@@ -29,11 +63,13 @@ end
 --- @field tree_winnr? number
 --- @field prev_cursor_abs_path? string
 --- @field keymaps TreeKeymaps
+--- @field icons_enabled boolean
 --- @param opts? TreeOpts
 M.tree = function(opts)
   opts = default(opts, {})
   opts.limit = default(opts.limit, 1)
   opts.keymaps = default(opts.keymaps, {})
+  opts.icons_enabled = default(opts.icons_enabled, true)
 
   local curr_winnr = vim.api.nvim_get_current_win()
   local curr_bufnr = vim.api.nvim_get_current_buf()
@@ -89,7 +125,8 @@ M.tree = function(opts)
       curr_bufname_abs_path_line = idx
     end
     local basename = vim.fs.basename(abs_path)
-    local formatted = whitespace .. basename
+    local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, }
+    local formatted = ("%s%s %s"):format(whitespace, icon_info.icon_char, basename)
     max_line_width = math.max(max_line_width, #formatted)
 
     --- @type Line
@@ -97,6 +134,8 @@ M.tree = function(opts)
       abs_path = abs_path,
       whitespace = whitespace,
       formatted = formatted,
+      icon_char = icon_info.icon_char,
+      icon_hl = icon_info.icon_hl,
     }
     table.insert(lines, line)
     table.insert(formatted_lines, formatted)
@@ -105,6 +144,21 @@ M.tree = function(opts)
   end
 
   vim.api.nvim_buf_set_lines(opts.tree_bufnr, 0, -1, false, formatted_lines)
+
+  vim.schedule(function()
+    for idx, line in ipairs(lines) do
+      local icon_hl_col_0_indexed = #line.whitespace
+      local row_1_indexed = idx
+      local row_0_indexed = row_1_indexed - 1
+      vim.hl.range(
+        opts.tree_bufnr,
+        ns_id,
+        line.icon_hl,
+        { row_0_indexed, icon_hl_col_0_indexed, },
+        { row_0_indexed, icon_hl_col_0_indexed + 1, }
+      )
+    end
+  end)
 
   local width_padding = 10
 
@@ -161,6 +215,7 @@ M.tree = function(opts)
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
       prev_cursor_abs_path = get_cursor_abs_path(),
+      icons_enabled = opts.icons_enabled,
     }
   end
 
@@ -176,6 +231,7 @@ M.tree = function(opts)
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
       prev_cursor_abs_path = get_cursor_abs_path(),
+      icons_enabled = opts.icons_enabled,
     }
   end
 
@@ -187,6 +243,7 @@ M.tree = function(opts)
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
       prev_cursor_abs_path = get_cursor_abs_path(),
+      icons_enabled = opts.icons_enabled,
     }
   end
 
@@ -209,6 +266,7 @@ M.tree = function(opts)
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
       prev_cursor_abs_path = get_cursor_abs_path(),
+      icons_enabled = opts.icons_enabled,
     }
   end
 

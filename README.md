@@ -4,7 +4,7 @@ A barebones, read-only file tree using the `tree` cli
 
 ## Status
 
-In progress, API will change
+Works, API may change
 
 ## API
 
@@ -17,6 +17,7 @@ In progress, API will change
 --- @field tree_dir? string
 --- @field limit? number
 --- @field keymaps TreeKeymaps
+--- @field icons_enabled boolean
 --- @param opts? TreeOpts
 M.tree = function(opts) end
 ```
@@ -27,6 +28,7 @@ require "tree".tree({
   -- defaults to
   tree_dir = "[the directory of the current buffer]",
   limit = 1,
+  icons_enabled = true,
   -- no keymaps are set by default
   keymaps = {
     ["<cr>"] = "select",
