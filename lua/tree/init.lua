@@ -248,8 +248,6 @@ M.tree = function(opts)
       curr_bufnr = opts.curr_bufnr,
       curr_winnr = opts.curr_winnr,
     }
-    -- free up memory
-    lines = {}
   end
 
   local function inc_limit()
@@ -304,10 +302,9 @@ M.tree = function(opts)
       vim.notify "[tree.nvim] selected is a directory"
       return
     end
-
+    close_tree()
     vim.api.nvim_set_current_win(opts.curr_winnr)
     vim.cmd("edit " .. line.abs_path)
-    close_tree()
   end
 
   local keymap_fns = {
