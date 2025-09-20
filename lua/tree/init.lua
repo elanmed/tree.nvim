@@ -299,7 +299,7 @@ M.tree = function(opts)
     local line = lines[line_nr]
 
     if vim.fn.filereadable(line.abs_path) == vimscript_false then
-      vim.notify "[tree.nvim] selected is a directory"
+      in_dir()
       return
     end
     close_tree()
