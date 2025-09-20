@@ -4,7 +4,7 @@ A barebones, read-only file tree using the `tree` cli
 
 ## Status
 
-Works, API may change
+Works, API stable, needs tests
 
 ## API
 
@@ -18,6 +18,7 @@ Works, API may change
 --- @field limit? number
 --- @field keymaps TreeKeymaps
 --- @field icons_enabled boolean
+--- ... and some other internal options passed to the recursive calls
 --- @param opts? TreeOpts
 M.tree = function(opts) end
 ```
