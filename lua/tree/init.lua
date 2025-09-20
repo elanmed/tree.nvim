@@ -61,6 +61,8 @@ end
 --- @field limit? number
 --- @field tree_bufnr? number
 --- @field tree_winnr? number
+--- @field curr_winnr? number
+--- @field curr_bufnr? number
 --- @field prev_cursor_abs_path? string
 --- @field keymaps TreeKeymaps
 --- @field icons_enabled boolean
@@ -71,9 +73,21 @@ M.tree = function(opts)
   opts.keymaps = default(opts.keymaps, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
 
-  local curr_winnr = vim.api.nvim_get_current_win()
-  local curr_bufnr = vim.api.nvim_get_current_buf()
-  local curr_bufname_abs_path = vim.api.nvim_buf_get_name(curr_bufnr)
+  opts.curr_winnr = (function()
+    if opts.curr_winnr then
+      return opts.curr_winnr
+    end
+    return vim.api.nvim_get_current_win()
+  end)()
+
+  opts.curr_bufnr = (function()
+    if opts.curr_bufnr then
+      return opts.curr_bufnr
+    end
+    return vim.api.nvim_get_current_buf()
+  end)()
+
+  local curr_bufname_abs_path = vim.api.nvim_buf_get_name(opts.curr_bufnr)
   local curr_dir = vim.fs.dirname(curr_bufname_abs_path)
   opts.tree_dir = default(opts.tree_dir, curr_dir)
 
@@ -206,7 +220,7 @@ M.tree = function(opts)
     vim.cmd "normal! gg"
     vim.api.nvim_win_set_cursor(opts.tree_winnr, { prev_cursor_abs_path_line, 0, })
   elseif curr_bufname_abs_path_line then
-    vim.cmd "normal! 'a"
+    vim.cmd "normal! gg'a"
   end
 
   local function get_cursor_abs_path()
@@ -215,15 +229,32 @@ M.tree = function(opts)
     return line.abs_path
   end
 
-  local function inc_limit()
+  --- @class RecurseOpts
+  --- @field limit? number
+  --- @field tree_dir? string
+  --- @param ropts? RecurseOpts
+  local function recurse(ropts)
+    ropts = default(ropts, {})
+    ropts.limit = default(ropts.limit, opts.limit)
+    ropts.tree_dir = default(ropts.tree_dir, opts.tree_dir)
     M.tree {
-      limit = opts.limit + 1,
+      limit = ropts.limit,
       tree_bufnr = opts.tree_bufnr,
-      tree_dir = opts.tree_dir,
+      tree_dir = ropts.tree_dir,
       tree_winnr = opts.tree_winnr,
       keymaps = opts.keymaps,
       prev_cursor_abs_path = get_cursor_abs_path(),
       icons_enabled = opts.icons_enabled,
+      curr_bufnr = opts.curr_bufnr,
+      curr_winnr = opts.curr_winnr,
+    }
+    -- free up memory
+    lines = {}
+  end
+
+  local function inc_limit()
+    recurse {
+      limit = opts.limit + 1,
     }
   end
 
@@ -232,26 +263,15 @@ M.tree = function(opts)
       vim.notify "[tree.nvim] limit must be greater than 0"
       return
     end
-    M.tree {
+    recurse {
       limit = opts.limit - 1,
-      tree_bufnr = opts.tree_bufnr,
-      tree_dir = opts.tree_dir,
-      tree_winnr = opts.tree_winnr,
-      keymaps = opts.keymaps,
-      prev_cursor_abs_path = get_cursor_abs_path(),
-      icons_enabled = opts.icons_enabled,
     }
   end
 
   local function out_dir()
-    M.tree {
+    recurse {
       limit = opts.limit + 1,
-      tree_bufnr = opts.tree_bufnr,
       tree_dir = vim.fs.dirname(opts.tree_dir),
-      tree_winnr = opts.tree_winnr,
-      keymaps = opts.keymaps,
-      prev_cursor_abs_path = get_cursor_abs_path(),
-      icons_enabled = opts.icons_enabled,
     }
   end
 
@@ -267,14 +287,8 @@ M.tree = function(opts)
       end
     end)()
 
-    M.tree {
-      limit = opts.limit,
-      tree_bufnr = opts.tree_bufnr,
+    recurse {
       tree_dir = in_tree_dir,
-      tree_winnr = opts.tree_winnr,
-      keymaps = opts.keymaps,
-      prev_cursor_abs_path = get_cursor_abs_path(),
-      icons_enabled = opts.icons_enabled,
     }
   end
 
@@ -291,7 +305,7 @@ M.tree = function(opts)
       return
     end
 
-    vim.api.nvim_set_current_win(curr_winnr)
+    vim.api.nvim_set_current_win(opts.curr_winnr)
     vim.cmd("edit " .. line.abs_path)
     close_tree()
   end
