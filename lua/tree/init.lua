@@ -315,7 +315,6 @@ M.tree = function(opts)
 
   local function out_dir()
     recurse {
-      limit = opts.limit + 1,
       tree_dir = vim.fs.dirname(opts.tree_dir),
     }
   end
