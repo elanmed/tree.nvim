@@ -130,12 +130,12 @@ M.tree = function(opts)
       return opts._tree_bufnr
     end
 
-    local _tree_bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_option_value("buftype", "nofile", { buf = _tree_bufnr, })
-    vim.api.nvim_set_option_value("buflisted", false, { buf = _tree_bufnr, })
-    vim.api.nvim_set_option_value("filetype", "tree", { buf = _tree_bufnr, })
+    local tree_bufnr = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_option_value("buftype", "nofile", { buf = tree_bufnr, })
+    vim.api.nvim_set_option_value("buflisted", false, { buf = tree_bufnr, })
+    vim.api.nvim_set_option_value("filetype", "tree", { buf = tree_bufnr, })
 
-    return _tree_bufnr
+    return tree_bufnr
   end)()
 
   local obj = vim.system(
@@ -229,7 +229,7 @@ M.tree = function(opts)
       math.min(math.max(1, #lines), editor_height - border_height)
     )
 
-    if opts._tree_winnr then
+    if opts._tree_winnr and vim.api.nvim_win_is_valid(opts._tree_winnr) then
       vim.api.nvim_win_set_config(opts._tree_winnr, {
         title = title,
         width = width,
@@ -238,7 +238,7 @@ M.tree = function(opts)
       return opts._tree_winnr
     end
 
-    local _tree_winnr = vim.api.nvim_open_win(opts._tree_bufnr, true, {
+    local tree_winnr = vim.api.nvim_open_win(opts._tree_bufnr, true, {
       relative = "editor",
       row = 1,
       col = 0,
@@ -248,12 +248,12 @@ M.tree = function(opts)
       style = "minimal",
       title = title,
     })
-    vim.api.nvim_set_option_value("foldmethod", "indent", { win = _tree_winnr, })
-    vim.api.nvim_set_option_value("cursorline", true, { win = _tree_winnr, })
-    set_opts(_tree_winnr, opts.tree_win_opts)
-    opts._minimal_tree_win_opts = get_minimal_opts(_tree_winnr)
+    vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
+    vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
+    set_opts(tree_winnr, opts.tree_win_opts)
+    opts._minimal_tree_win_opts = get_minimal_opts(tree_winnr)
 
-    return _tree_winnr
+    return tree_winnr
   end)()
   vim.api.nvim_win_set_buf(opts._tree_winnr, opts._tree_bufnr)
 
