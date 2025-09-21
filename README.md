@@ -2,10 +2,6 @@
 
 A barebones, read-only file tree using the `tree` cli
 
-## Status
-
-Works, API stable, needs tests
-
 ## API
 
 ### `tree`
@@ -16,6 +12,7 @@ Works, API stable, needs tests
 --- @class TreeOpts
 --- @field tree_dir? string
 --- @field limit? number
+--- @field tree_win_opts? vim.wo
 --- @field keymaps TreeKeymaps
 --- @field icons_enabled boolean
 --- ... and some other internal options passed to the recursive calls
