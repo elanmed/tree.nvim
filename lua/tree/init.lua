@@ -207,7 +207,9 @@ M.tree = function(opts)
     ::continue::
   end
 
+  vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
+  vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr, })
 
   vim.schedule(function()
     for idx, line in ipairs(lines) do
@@ -302,6 +304,7 @@ M.tree = function(opts)
       _minimal_tree_win_opts = opts._minimal_tree_win_opts,
       tree_win_opts = opts.tree_win_opts,
     }
+    lines = nil
   end
 
   local function inc_limit()
