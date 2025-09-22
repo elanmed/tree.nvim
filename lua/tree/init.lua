@@ -96,6 +96,8 @@ end
 --- @param opts? TreeOpts
 M.tree = function(opts)
   opts = default(opts, {})
+  opts = vim.deepcopy(opts)
+
   opts.limit = default(opts.limit, 1)
   opts.keymaps = default(opts.keymaps, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
