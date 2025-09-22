@@ -71,7 +71,6 @@ local set_opts = function(winnr, opts)
   end
 end
 
-
 --- @class Line
 --- @field whitespace string
 --- @field abs_path string
