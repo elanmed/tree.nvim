@@ -16,6 +16,11 @@ local default = function(val, default_val)
   return val
 end
 
+--- @param path string
+local fs_exists = function(path)
+  return vim.uv.fs_stat(path)
+end
+
 --- @class GetIconInfoOpts
 --- @field icons_enabled boolean
 --- @field abs_path string
@@ -121,7 +126,7 @@ M.tree = function(opts)
   local curr_dir = (function()
     -- vim opened with no arguments
     if curr_bufname_abs_path == "" then
-      return vim.uv.cwd()
+      return vim.fn.getcwd()
     end
 
     if vim.fn.isdirectory(curr_bufname_abs_path) == vimscript_true then
@@ -301,6 +306,7 @@ M.tree = function(opts)
   --- @param ropts? RecurseOpts
   local function recurse(ropts)
     ropts = default(ropts, {})
+    ropts = vim.deepcopy(ropts)
     ropts.limit = default(ropts.limit, opts.limit)
     ropts.tree_dir = default(ropts.tree_dir, opts.tree_dir)
     M.tree {
@@ -342,20 +348,12 @@ M.tree = function(opts)
   end
 
   local function in_dir()
-    local line_nr = vim.fn.line "."
-    local line = lines[line_nr]
-
-    local in_tree_dir = (function()
-      if vim.fn.isdirectory(line.abs_path) == vimscript_true then
-        return line.abs_path
-      elseif vim.fn.filereadable(line.abs_path) == vimscript_true then
-        return vim.fs.dirname(line.abs_path)
-      end
-    end)()
-
-    recurse {
-      tree_dir = in_tree_dir,
-    }
+    local line = lines[vim.fn.line "."]
+    if vim.fn.isdirectory(line.abs_path) == vimscript_true then
+      recurse {
+        tree_dir = line.abs_path,
+      }
+    end
   end
 
   local close_tree = function()
@@ -363,44 +361,143 @@ M.tree = function(opts)
   end
 
   local select = function()
-    local line_nr = vim.fn.line "."
-    local line = lines[line_nr]
+    local line = lines[vim.fn.line "."]
 
-    if vim.fn.filereadable(line.abs_path) == vimscript_false then
+    if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       in_dir()
       return
     end
+
     close_tree()
     vim.api.nvim_set_current_win(opts._curr_winnr)
     vim.cmd("edit " .. line.abs_path)
   end
 
   local yank_abs_path = function()
-    local line_nr = vim.fn.line "."
-    local line = lines[line_nr]
+    local line = lines[vim.fn.line "."]
     vim.fn.setreg("", line.abs_path)
     vim.fn.setreg("+", line.abs_path)
     vim.notify("[tree.nvim] absolute path yanked", vim.log.levels.INFO)
   end
 
   local yank_rel_path = function()
-    local line_nr = vim.fn.line "."
-    local line = lines[line_nr]
-    local cwd = vim.uv.cwd()
+    local line = lines[vim.fn.line "."]
+    local cwd = vim.fn.getcwd()
     vim.fn.setreg("", vim.fs.relpath(cwd, line.abs_path))
     vim.fn.setreg("+", vim.fs.relpath(cwd, line.abs_path))
     vim.notify("[tree.nvim] relative path yanked", vim.log.levels.INFO)
   end
 
+  local refresh = function()
+    recurse()
+  end
+
+  local create = function()
+    local line = lines[vim.fn.line "."]
+    local dirname = (function()
+      local rel_path = vim.fs.relpath(vim.fn.getcwd(), line.abs_path)
+      if vim.fn.isdirectory(line.abs_path) == vimscript_true then
+        return rel_path
+      end
+      return vim.fs.dirname(rel_path)
+    end)()
+
+    local create_path = vim.fn.input("Create a file or dir: ", dirname .. "/")
+    if create_path == "" then return end
+
+    if vim.endswith(create_path, "/") then
+      if fs_exists(create_path) then
+        vim.notify(
+          ("[tree.nvim] Cannot create a directory that already exists: %s"):format(create_path),
+          vim.log.levels.ERROR
+        )
+        return
+      end
+
+      local mkdir_success = vim.fn.mkdir(create_path, "p")
+      if mkdir_success == vimscript_false then
+        vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.INFO)
+        return
+      end
+
+      vim.schedule(refresh)
+      return
+    end
+
+    if fs_exists(create_path) then
+      vim.notify(
+        ("[tree.nvim] Cannot create a file that already exists: %s"):format(create_path),
+        vim.log.levels.ERROR
+      )
+      return
+    end
+
+    local mkdir_success = vim.fn.mkdir(vim.fs.dirname(create_path), "p")
+    if mkdir_success == vimscript_false then
+      vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.INFO)
+      return
+    end
+
+    local writefile_success = vim.fn.writefile({}, create_path)
+    if writefile_success == vimscript_false then
+      vim.notify("[tree.nvim] vim.fn.writefile returned 0", vim.log.levels.INFO)
+      return
+    end
+
+    vim.schedule(refresh)
+  end
+
+  local delete = function()
+    local line = lines[vim.fn.line "."]
+    local option = vim.fn.confirm(("Delete %s?"):format(line.abs_path), "&Yes\n&No", 2)
+    if option == 2 then
+      vim.notify("[tree.nvim] Aborting delete", vim.log.levels.INFO)
+      return
+    end
+
+    local success = vim.fn.delete(line.abs_path, "rf")
+    if success == vimscript_false then
+      vim.notify("[tree.nvim] vim.fn.delete returned 0", vim.log.levels.INFO)
+      return
+    end
+
+    vim.schedule(refresh)
+  end
+
+  local rename = function()
+    local line = lines[vim.fn.line "."]
+    local rename_path = vim.fn.input("Rename: ", line.abs_path)
+    if rename_path == "" then return end
+
+    if fs_exists(rename_path) then
+      vim.notify(
+        ("[tree.nvim] Rename path already exists: %s"):format(rename_path),
+        vim.log.levels.ERROR
+      )
+      return
+    end
+
+    local success = vim.fn.rename(line.abs_path, rename_path)
+    if success == vimscript_false then
+      vim.notify("[tree.nvim] vim.fn.rename returned 0", vim.log.levels.INFO)
+      return
+    end
+    vim.schedule(refresh)
+  end
+
   local keymap_fns = {
     ["close-tree"] = close_tree,
-    ["select"] = select,
+    select = select,
     ["inc-limit"] = inc_limit,
     ["dec-limit"] = dec_limit,
     ["out-dir"] = out_dir,
     ["in-dir"] = in_dir,
     ["yank-rel-path"] = yank_rel_path,
     ["yank-abs-path"] = yank_abs_path,
+    create = create,
+    refresh = refresh,
+    delete = delete,
+    rename = rename,
   }
 
   for key, map in pairs(opts.keymaps) do
