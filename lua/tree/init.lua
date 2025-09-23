@@ -262,6 +262,18 @@ M.tree = function(opts)
     set_opts(tree_winnr, opts.tree_win_opts)
     opts._minimal_tree_win_opts = get_minimal_opts(tree_winnr)
 
+    vim.api.nvim_create_autocmd("BufWinEnter", {
+      callback = function()
+        if not vim.api.nvim_win_is_valid(tree_winnr) then return end
+        if vim.api.nvim_get_current_win() ~= tree_winnr then return end
+        if vim.api.nvim_get_current_buf() ~= opts._tree_bufnr then
+          vim.api.nvim_win_set_buf(tree_winnr, opts._tree_bufnr)
+        end
+        set_opts(opts.winnr, opts._minimal_tree_win_opts)
+        set_opts(opts.winnr, opts.tree_win_opts)
+      end,
+    })
+
     return tree_winnr
   end)()
   vim.api.nvim_win_set_buf(opts._tree_winnr, opts._tree_bufnr)
@@ -396,18 +408,6 @@ M.tree = function(opts)
       keymap_fns[map]()
     end, { buffer = opts._tree_bufnr, })
   end
-
-  vim.api.nvim_create_autocmd("BufWinEnter", {
-    callback = function()
-      if not vim.api.nvim_win_is_valid(opts._tree_winnr) then return end
-      if vim.api.nvim_get_current_win() ~= opts._tree_winnr then return end
-      if vim.api.nvim_get_current_buf() ~= opts._tree_bufnr then
-        vim.api.nvim_win_set_buf(opts._tree_winnr, opts._tree_bufnr)
-      end
-      set_opts(opts._tree_winnr, opts._minimal_tree_win_opts)
-      set_opts(opts._tree_winnr, opts.tree_win_opts)
-    end,
-  })
 end
 
 return M
