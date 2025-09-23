@@ -79,7 +79,7 @@ end
 --- @field icon_hl string
 
 --- @class TreeKeymaps
---- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-limit"|"dec-limit"
+--- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-limit"|"dec-limit"|"yank-abs-path"|"yank-rel-path"
 
 --- @class TreeOpts
 --- @field tree_dir? string
@@ -363,6 +363,23 @@ M.tree = function(opts)
     vim.cmd("edit " .. line.abs_path)
   end
 
+  local yank_abs_path = function()
+    local line_nr = vim.fn.line "."
+    local line = lines[line_nr]
+    vim.fn.setreg("", line.abs_path)
+    vim.fn.setreg("+", line.abs_path)
+    vim.notify("[tree.nvim] absolute path yanked", vim.log.levels.INFO)
+  end
+
+  local yank_rel_path = function()
+    local line_nr = vim.fn.line "."
+    local line = lines[line_nr]
+    local cwd = vim.uv.cwd()
+    vim.fn.setreg("", vim.fs.relpath(cwd, line.abs_path))
+    vim.fn.setreg("+", vim.fs.relpath(cwd, line.abs_path))
+    vim.notify("[tree.nvim] relative path yanked", vim.log.levels.INFO)
+  end
+
   local keymap_fns = {
     ["close-tree"] = close_tree,
     ["select"] = select,
@@ -370,6 +387,8 @@ M.tree = function(opts)
     ["dec-limit"] = dec_limit,
     ["out-dir"] = out_dir,
     ["in-dir"] = in_dir,
+    ["yank-rel-path"] = yank_rel_path,
+    ["yank-abs-path"] = yank_abs_path,
   }
 
   for key, map in pairs(opts.keymaps) do
