@@ -1,6 +1,6 @@
 # `tree.nvim`
 
-A barebones, read-only file tree using the `tree` cli
+A simple file tree built with the `tree` cli
 
 ## API
 
@@ -45,3 +45,6 @@ require "tree".tree({
   },
 })
 ```
+
+## TODO
+- [ ] Tests for create, delete, rename
