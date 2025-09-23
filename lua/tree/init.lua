@@ -439,8 +439,8 @@ M.tree = function(opts)
     end
 
     local writefile_success = vim.fn.writefile({}, create_path)
-    if writefile_success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.writefile returned 0", vim.log.levels.ERROR)
+    if writefile_success == -1 then
+      vim.notify("[tree.nvim] vim.fn.writefile returned -1", vim.log.levels.ERROR)
       return
     end
 
@@ -456,8 +456,8 @@ M.tree = function(opts)
     end
 
     local success = vim.fn.delete(line.abs_path, "rf")
-    if success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.delete returned 0", vim.log.levels.ERROR)
+    if success == -1 then
+      vim.notify("[tree.nvim] vim.fn.delete returned -1", vim.log.levels.ERROR)
       return
     end
 
@@ -478,8 +478,8 @@ M.tree = function(opts)
     end
 
     local success = vim.fn.rename(line.abs_path, rename_path)
-    if success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.rename returned 0", vim.log.levels.ERROR)
+    if success ~= 0 then
+      vim.notify("[tree.nvim] vim.fn.rename returned a non-zero value: " .. success, vim.log.levels.ERROR)
       return
     end
     vim.schedule(refresh)
