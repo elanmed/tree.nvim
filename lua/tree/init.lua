@@ -402,8 +402,17 @@ M.tree = function(opts)
       return vim.fs.dirname(rel_path)
     end)()
 
-    local create_path = vim.fn.input("Create a file or dir: ", dirname .. "/")
-    if create_path == "" then return end
+    local create_path = vim.fn.input("Create a file or directory: ", dirname .. "/")
+    if create_path == "" then
+      vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
+      return
+    end
+
+    local option = vim.fn.confirm(("Create %s?"):format(create_path), "&Yes\n&No", 2)
+    if option == 2 then
+      vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
+      return
+    end
 
     if vim.endswith(create_path, "/") then
       if fs_exists(create_path) then
@@ -449,7 +458,7 @@ M.tree = function(opts)
 
   local delete = function()
     local line = lines[vim.fn.line "."]
-    local option = vim.fn.confirm(("Delete %s?"):format(line.abs_path), "&Yes\n&No", 2)
+    local option = vim.fn.confirm(("Delete? %s"):format(line.abs_path), "&Yes\n&No", 2)
     if option == 2 then
       vim.notify("[tree.nvim] Aborting delete", vim.log.levels.INFO)
       return
@@ -466,8 +475,17 @@ M.tree = function(opts)
 
   local rename = function()
     local line = lines[vim.fn.line "."]
-    local rename_path = vim.fn.input("Rename: ", line.abs_path)
-    if rename_path == "" then return end
+    local rename_path = vim.fn.input("Rename to: ", line.abs_path)
+    if rename_path == "" then
+      vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
+      return
+    end
+
+    local option = vim.fn.confirm(("Rename %s -> %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
+    if option == 2 then
+      vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
+      return
+    end
 
     if fs_exists(rename_path) then
       vim.notify(
