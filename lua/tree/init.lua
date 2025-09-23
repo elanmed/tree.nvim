@@ -333,7 +333,7 @@ M.tree = function(opts)
 
   local function dec_limit()
     if opts.limit == 1 then
-      vim.notify "[tree.nvim] limit must be greater than 0"
+      vim.notify("[tree.nvim] limit must be greater than 0", vim.log.levels.INFO)
       return
     end
     recurse {
@@ -416,7 +416,7 @@ M.tree = function(opts)
 
       local mkdir_success = vim.fn.mkdir(create_path, "p")
       if mkdir_success == vimscript_false then
-        vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.INFO)
+        vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
         return
       end
 
@@ -434,13 +434,13 @@ M.tree = function(opts)
 
     local mkdir_success = vim.fn.mkdir(vim.fs.dirname(create_path), "p")
     if mkdir_success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.INFO)
+      vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
       return
     end
 
     local writefile_success = vim.fn.writefile({}, create_path)
     if writefile_success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.writefile returned 0", vim.log.levels.INFO)
+      vim.notify("[tree.nvim] vim.fn.writefile returned 0", vim.log.levels.ERROR)
       return
     end
 
@@ -457,7 +457,7 @@ M.tree = function(opts)
 
     local success = vim.fn.delete(line.abs_path, "rf")
     if success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.delete returned 0", vim.log.levels.INFO)
+      vim.notify("[tree.nvim] vim.fn.delete returned 0", vim.log.levels.ERROR)
       return
     end
 
@@ -479,7 +479,7 @@ M.tree = function(opts)
 
     local success = vim.fn.rename(line.abs_path, rename_path)
     if success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.rename returned 0", vim.log.levels.INFO)
+      vim.notify("[tree.nvim] vim.fn.rename returned 0", vim.log.levels.ERROR)
       return
     end
     vim.schedule(refresh)
