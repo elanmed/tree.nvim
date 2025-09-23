@@ -269,8 +269,8 @@ M.tree = function(opts)
         if vim.api.nvim_get_current_buf() ~= opts._tree_bufnr then
           vim.api.nvim_win_set_buf(tree_winnr, opts._tree_bufnr)
         end
-        set_opts(opts.winnr, opts._minimal_tree_win_opts)
-        set_opts(opts.winnr, opts.tree_win_opts)
+        set_opts(tree_winnr, opts._minimal_tree_win_opts)
+        set_opts(tree_winnr, opts.tree_win_opts)
       end,
     })
 
