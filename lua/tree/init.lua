@@ -447,6 +447,7 @@ M.tree = function(opts)
     end
 
     vim.schedule(refresh)
+    vim.cmd "doautocmd User TreeCreate"
   end
 
   local delete = function()
@@ -464,6 +465,7 @@ M.tree = function(opts)
     end
 
     vim.schedule(refresh)
+    vim.cmd "doautocmd User TreeDelete"
   end
 
   local rename = function()
@@ -494,6 +496,7 @@ M.tree = function(opts)
       return
     end
     vim.schedule(refresh)
+    vim.cmd "doautocmd User TreeRename"
   end
 
   local keymap_fns = {
