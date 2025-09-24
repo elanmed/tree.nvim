@@ -377,15 +377,16 @@ M.tree = function(opts)
     local line = lines[vim.fn.line "."]
     vim.fn.setreg("", line.abs_path)
     vim.fn.setreg("+", line.abs_path)
-    vim.notify("[tree.nvim] absolute path yanked", vim.log.levels.INFO)
+    vim.notify(("[tree.nvim] absolute path yanked: %s"):format(line.abs_path), vim.log.levels.INFO)
   end
 
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
     local cwd = vim.fn.getcwd()
-    vim.fn.setreg("", vim.fs.relpath(cwd, line.abs_path))
-    vim.fn.setreg("+", vim.fs.relpath(cwd, line.abs_path))
-    vim.notify("[tree.nvim] relative path yanked", vim.log.levels.INFO)
+    local rel_path = vim.fs.relpath(cwd, line.abs_path)
+    vim.fn.setreg("", rel_path)
+    vim.fn.setreg("+", rel_path)
+    vim.notify(("[tree.nvim] relative path yanked: %s"):format(rel_path), vim.log.levels.INFO)
   end
 
   local refresh = function()
