@@ -6,7 +6,6 @@ Table of Contents                                     *tree-table-of-contents*
 API ............................................................... |tree-api|
 `tree` ........................................................... |tree-tree|
 Example config ......................................... |tree-example-config|
-TODO ............................................................. |tree-todo|
 
 ==============================================================================
 `TREE.NVIM`                                                   *tree-tree.nvim*
@@ -66,11 +65,5 @@ EXAMPLE CONFIG                                           *tree-example-config*
       },
     })
 <
-
-------------------------------------------------------------------------------
-TODO                                                               *tree-todo*
-
-
-- [ ] Tests for create, delete, rename
 
 vim:tw=78:ts=8:ft=help:norl:

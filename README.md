@@ -45,6 +45,3 @@ require "tree".tree({
   },
 })
 ```
-
-## TODO
-- [ ] Tests for create, delete, rename
