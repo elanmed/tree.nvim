@@ -342,6 +342,7 @@ M.tree = function(opts)
   local out_dir = function()
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
+      level = 1,
     }
   end
 
