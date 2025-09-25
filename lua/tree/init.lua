@@ -237,11 +237,9 @@ M.tree = function(opts)
     local title = ("tree %s/ -L %s"):format(vim.fs.basename(opts.tree_dir), opts.level)
     local border_height = 2
     local width = math.max(#title, max_line_width + width_padding)
-    local editor_height = vim.o.lines - 1
-    local height = math.max(
-      1,
-      math.min(math.max(1, #lines), editor_height - border_height)
-    )
+    local editor_height = vim.api.nvim_win_get_height(opts._curr_winnr)
+    local height = math.min(#lines, editor_height - border_height)
+    if height < 1 then height = 1 end
 
     if opts._tree_winnr and vim.api.nvim_win_is_valid(opts._tree_winnr) then
       vim.api.nvim_win_set_config(opts._tree_winnr, {
