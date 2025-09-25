@@ -292,7 +292,7 @@ M.tree = function(opts)
     vim.cmd "normal! gg'a"
   end
 
-  local function get_cursor_abs_path()
+  local get_cursor_abs_path = function()
     local line_nr = vim.fn.line "."
     local line = lines[line_nr]
     return line.abs_path
@@ -302,7 +302,7 @@ M.tree = function(opts)
   --- @field level? number
   --- @field tree_dir? string
   --- @param ropts? RecurseOpts
-  local function recurse(ropts)
+  local recurse = function(ropts)
     ropts = default(ropts, {})
     ropts = vim.deepcopy(ropts)
     ropts.level = default(ropts.level, opts.level)
@@ -323,13 +323,13 @@ M.tree = function(opts)
     lines = nil
   end
 
-  local function inc_level()
+  local inc_level = function()
     recurse {
       level = opts.level + 1,
     }
   end
 
-  local function dec_level()
+  local dec_level = function()
     if opts.level == 1 then
       vim.notify("[tree.nvim] level must be greater than 0", vim.log.levels.INFO)
       return
@@ -339,13 +339,13 @@ M.tree = function(opts)
     }
   end
 
-  local function out_dir()
+  local out_dir = function()
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
     }
   end
 
-  local function in_dir()
+  local in_dir = function()
     local line = lines[vim.fn.line "."]
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       recurse {
