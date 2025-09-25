@@ -25,11 +25,11 @@ API                                                                 *tree-api*
 
 >lua
     --- @class TreeKeymaps
-    --- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-limit"|"dec-limit"|"yank-rel-path"|"yank-abs-path"|"create"|"refresh"|"delete"|"rename"
+    --- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-level"|"dec-level"|"yank-rel-path"|"yank-abs-path"|"create"|"refresh"|"delete"|"rename"
     
     --- @class TreeOpts
     --- @field tree_dir? string
-    --- @field limit? number
+    --- @field level? number
     --- @field tree_win_opts? vim.wo
     --- @field keymaps TreeKeymaps
     --- @field icons_enabled boolean
@@ -46,14 +46,14 @@ EXAMPLE CONFIG                                           *tree-example-config*
     require "tree".tree({
       -- defaults to
       tree_dir = "[the directory of the current buffer]",
-      limit = 1,
+      level = 1,
       icons_enabled = true,
       tree_win_opts = {},
       -- no keymaps are set by default
       keymaps = {
         ["<cr>"] = "select",
-        ["<"] = "dec-limit",
-        [">"] = "inc-limit",
+        ["<"] = "dec-level",
+        [">"] = "inc-level",
         q = "close-tree",
         h = "out-dir",
         l = "in-dir",

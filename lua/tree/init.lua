@@ -84,11 +84,11 @@ end
 --- @field icon_hl string
 
 --- @class TreeKeymaps
---- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-limit"|"dec-limit"|"yank-abs-path"|"yank-rel-path"
+--- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-level"|"dec-level"|"yank-abs-path"|"yank-rel-path"
 
 --- @class TreeOpts
 --- @field tree_dir? string
---- @field limit? number
+--- @field level? number
 --- @field tree_win_opts? vim.wo
 --- @field keymaps TreeKeymaps
 --- @field icons_enabled boolean
@@ -103,7 +103,7 @@ M.tree = function(opts)
   opts = default(opts, {})
   opts = vim.deepcopy(opts)
 
-  opts.limit = default(opts.limit, 1)
+  opts.level = default(opts.level, 1)
   opts.keymaps = default(opts.keymaps, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
   opts.tree_win_opts = default(opts.tree_win_opts, {})
@@ -151,7 +151,7 @@ M.tree = function(opts)
   end)()
 
   local obj = vim.system(
-    { "tree", "-f", "-a", "--noreport", "--charset=ascii", "-L", tostring(opts.limit), },
+    { "tree", "-f", "-a", "--noreport", "--charset=ascii", "-L", tostring(opts.level), },
     { cwd = opts.tree_dir, }
   ):wait()
 
@@ -234,7 +234,7 @@ M.tree = function(opts)
   local width_padding = 10
 
   opts._tree_winnr = (function()
-    local title = ("tree %s/ -L %s"):format(vim.fs.basename(opts.tree_dir), opts.limit)
+    local title = ("tree %s/ -L %s"):format(vim.fs.basename(opts.tree_dir), opts.level)
     local border_height = 2
     local width = math.max(#title, max_line_width + width_padding)
     local editor_height = vim.o.lines - 1
@@ -301,16 +301,16 @@ M.tree = function(opts)
   end
 
   --- @class RecurseOpts
-  --- @field limit? number
+  --- @field level? number
   --- @field tree_dir? string
   --- @param ropts? RecurseOpts
   local function recurse(ropts)
     ropts = default(ropts, {})
     ropts = vim.deepcopy(ropts)
-    ropts.limit = default(ropts.limit, opts.limit)
+    ropts.level = default(ropts.level, opts.level)
     ropts.tree_dir = default(ropts.tree_dir, opts.tree_dir)
     M.tree {
-      limit = ropts.limit,
+      level = ropts.level,
       _tree_bufnr = opts._tree_bufnr,
       tree_dir = ropts.tree_dir,
       _tree_winnr = opts._tree_winnr,
@@ -325,19 +325,19 @@ M.tree = function(opts)
     lines = nil
   end
 
-  local function inc_limit()
+  local function inc_level()
     recurse {
-      limit = opts.limit + 1,
+      level = opts.level + 1,
     }
   end
 
-  local function dec_limit()
-    if opts.limit == 1 then
-      vim.notify("[tree.nvim] limit must be greater than 0", vim.log.levels.INFO)
+  local function dec_level()
+    if opts.level == 1 then
+      vim.notify("[tree.nvim] level must be greater than 0", vim.log.levels.INFO)
       return
     end
     recurse {
-      limit = opts.limit - 1,
+      level = opts.level - 1,
     }
   end
 
@@ -352,6 +352,7 @@ M.tree = function(opts)
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       recurse {
         tree_dir = line.abs_path,
+        level = 1,
       }
     end
   end
@@ -503,8 +504,8 @@ M.tree = function(opts)
   local keymap_fns = {
     ["close-tree"] = close_tree,
     select = select,
-    ["inc-limit"] = inc_limit,
-    ["dec-limit"] = dec_limit,
+    ["inc-level"] = inc_level,
+    ["dec-level"] = dec_level,
     ["out-dir"] = out_dir,
     ["in-dir"] = in_dir,
     ["yank-rel-path"] = yank_rel_path,

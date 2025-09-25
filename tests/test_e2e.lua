@@ -17,8 +17,8 @@ local T = MiniTest.new_set {
           keymaps = {
             ["<cr>"] = "select",
             ["q"] = "close-tree",
-            ["<"] = "dec-limit",
-            [">"] = "inc-limit",
+            ["<"] = "dec-level",
+            [">"] = "inc-level",
             ["h"] = "out-dir",
             ["l"] = "in-dir",
           }
@@ -32,14 +32,14 @@ local T = MiniTest.new_set {
 T["tree"] = MiniTest.new_set()
 
 T["tree"]["keymaps"] = MiniTest.new_set()
-T["tree"]["keymaps"]["inc-limit"] = function()
+T["tree"]["keymaps"]["inc-level"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["keymaps"]["dec-limit"] = function()
+T["tree"]["keymaps"]["dec-level"] = function()
   child.type_keys { ">", ">", }
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
