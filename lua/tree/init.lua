@@ -193,6 +193,8 @@ M.tree = function(opts)
       local abs_path = vim.fs.joinpath(opts.tree_dir, rel_path)
       local basename = vim.fs.basename(abs_path)
       local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = entry.type, }
+      local icon_type = entry.type == "directory" and "directory" or "file"
+      local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type, }
       local whitespace = ("  "):rep(indent)
       local formatted = ("%s%s %s"):format(whitespace, icon_info.icon_char, basename)
       max_line_width = math.max(max_line_width, #formatted)
