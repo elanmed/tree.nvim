@@ -24,6 +24,7 @@ end
 --- @class GetIconInfoOpts
 --- @field icons_enabled boolean
 --- @field abs_path string
+--- @field type "file"|"directory"
 --- @param opts GetIconInfoOpts
 local get_icon_info = function(opts)
   if not opts.icons_enabled then
@@ -37,13 +38,7 @@ local get_icon_info = function(opts)
     error "[tree.nvim] `mini.icons` is required when `icons_enabled` is `true`"
   end
 
-  local icon_type = (function()
-    if vim.fn.isdirectory(opts.abs_path) == vimscript_true then
-      return "directory"
-    end
-    return "file"
-  end)()
-  local icon_char, icon_hl = mini_icons.get(icon_type, opts.abs_path)
+  local icon_char, icon_hl = mini_icons.get(opts.type, opts.abs_path)
 
   return {
     icon_char = icon_char,
@@ -82,6 +77,12 @@ end
 --- @field formatted string
 --- @field icon_char string
 --- @field icon_hl string
+
+--- @class TreeJson
+--- @field type "file"|"directory"
+--- @field name string
+--- @field contents TreeJson[]
+--- @field target string
 
 --- @class TreeKeymaps
 --- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-level"|"dec-level"|"yank-abs-path"|"yank-rel-path"
@@ -151,7 +152,7 @@ M.tree = function(opts)
   end)()
 
   local obj = vim.system(
-    { "tree", "-f", "-a", "--noreport", "--charset=ascii", "-L", tostring(opts.level), },
+    { "tree", "-f", "-a", "--noreport", "-J", "-L", tostring(opts.level), },
     { cwd = opts.tree_dir, }
   ):wait()
 
@@ -163,54 +164,65 @@ M.tree = function(opts)
     error "[tree.nvim] no stdout from `tree`"
   end
 
+  --- @type TreeJson[]
+  local json = vim.json.decode(obj.stdout)
+  if not json[1] then
+    error "[tree.nvim] empty json from the `tree` cli"
+  end
+
+  if json[1].type ~= "directory" then
+    error "[tree.nvim] top-level json object is not a directory"
+  end
+
   --- @type Line[]
   local lines = {}
   --- @type string[]
   local formatted_lines = {}
+
   local max_line_width = 0
   local _prev_cursor_abs_path_line = nil
   local curr_bufname_abs_path_line = nil
 
-  for idx, str in ipairs(vim.split(obj.stdout, "\n")) do
-    if str == "" then
-      goto continue
+  --- @param json_arg TreeJson[]
+  --- @param indent number
+  local function build_lines(json_arg, indent)
+    for _, entry in ipairs(json_arg) do
+      local name = entry.type == "directory" and entry.name .. "/" or entry.name
+
+      local rel_path = vim.fs.normalize(name)
+      local abs_path = vim.fs.joinpath(opts.tree_dir, rel_path)
+      local basename = vim.fs.basename(abs_path)
+      local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = entry.type, }
+      local whitespace = ("  "):rep(indent)
+      local formatted = ("%s%s %s"):format(whitespace, icon_info.icon_char, basename)
+      max_line_width = math.max(max_line_width, #formatted)
+
+      --- @type Line
+      local line = {
+        abs_path = abs_path,
+        whitespace = whitespace,
+        formatted = formatted,
+        icon_char = icon_info.icon_char,
+        icon_hl = icon_info.icon_hl,
+      }
+      table.insert(lines, line)
+      table.insert(formatted_lines, formatted)
+
+      if abs_path == opts._prev_cursor_abs_path then
+        _prev_cursor_abs_path_line = #lines
+      end
+
+      if abs_path == curr_bufname_abs_path then
+        curr_bufname_abs_path_line = #lines
+      end
+
+      if entry.contents then
+        build_lines(entry.contents, indent + 1)
+      end
     end
-
-    local period_pos = str:find "%."
-    if not period_pos then
-      error "[tree.nvim] malformed stdout, expected each line to start with a `.`"
-    end
-
-    local prefix_length = period_pos - 1
-    local whitespace = string.rep(" ", prefix_length / 2)
-    local filename = str:sub(period_pos)
-
-    local rel_path = vim.fs.normalize(filename)
-    local abs_path = vim.fs.joinpath(opts.tree_dir, rel_path)
-    if abs_path == opts._prev_cursor_abs_path then
-      _prev_cursor_abs_path_line = idx
-    end
-    if abs_path == curr_bufname_abs_path then
-      curr_bufname_abs_path_line = idx
-    end
-    local basename = vim.fs.basename(abs_path)
-    local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, }
-    local formatted = ("%s%s %s"):format(whitespace, icon_info.icon_char, basename)
-    max_line_width = math.max(max_line_width, #formatted)
-
-    --- @type Line
-    local line = {
-      abs_path = abs_path,
-      whitespace = whitespace,
-      formatted = formatted,
-      icon_char = icon_info.icon_char,
-      icon_hl = icon_info.icon_hl,
-    }
-    table.insert(lines, line)
-    table.insert(formatted_lines, formatted)
-
-    ::continue::
   end
+
+  build_lines(json[1].contents, 0)
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
@@ -521,5 +533,6 @@ M.tree = function(opts)
     end, { buffer = opts._tree_bufnr, })
   end
 end
+
 
 return M

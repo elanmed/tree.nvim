@@ -9,7 +9,7 @@ local T = MiniTest.new_set {
       child.restart { "-u", "scripts/minimal_init.lua", }
       child.bo.readonly = false
       child.lua [[M = require('tree')]]
-      child.o.lines = 30
+      child.o.lines = 20
       child.o.columns = 30
       child.lua [[
         M.tree {
@@ -50,13 +50,13 @@ T["tree"]["keymaps"]["dec-level"] = function()
 end
 T["tree"]["keymaps"]["in-dir"] = function()
   expect.reference_screenshot(child.get_screenshot())
-  child.type_keys { "j", "l", }
+  child.type_keys { "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "l"
   expect.reference_screenshot(child.get_screenshot())
 end
 T["tree"]["keymaps"]["out-dir"] = function()
-  child.type_keys { "j", "l", "l", }
+  child.type_keys { "l", "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "h"
   expect.reference_screenshot(child.get_screenshot())
@@ -64,7 +64,7 @@ T["tree"]["keymaps"]["out-dir"] = function()
   expect.reference_screenshot(child.get_screenshot())
 end
 T["tree"]["keymaps"]["select"] = function()
-  child.type_keys { "j", "l", "l", }
+  child.type_keys { "l", "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "<cr>"
   expect.reference_screenshot(child.get_screenshot())
@@ -78,7 +78,7 @@ T["tree"]["keymaps"]["close"] = function()
 end
 
 T["tree"]["buffer switching autocommand"] = function()
-  child.type_keys { "j", "l", "l", "<cr>", }
+  child.type_keys { "l", "l", "<cr>", }
   expect.reference_screenshot(child.get_screenshot())
   child.lua [[M.tree()]]
   expect.reference_screenshot(child.get_screenshot())
