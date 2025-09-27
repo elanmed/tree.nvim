@@ -98,7 +98,8 @@ end
 --- @field _minimal_tree_win_opts? table
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
---- @field _prev_cursor_abs_path? string
+--- @field _prev_cursor_file? string
+--- @field _prev_dir? string
 --- @param opts? TreeOpts
 M.tree = function(opts)
   opts = default(opts, {})
@@ -151,6 +152,11 @@ M.tree = function(opts)
     return tree_bufnr
   end)()
 
+  -- -f Prints the full path prefix for each file.
+  -- -a All files are printed.  By default tree does not print hidden files (those beginning with a dot `.').
+  -- --no-report Omits printing of the file and directory report at the end of the tree listing.
+  -- -J Turn on JSON output. Outputs the directory tree as a JSON formatted array.
+  -- -L Max display depth of the directory tree.
   local obj = vim.system(
     { "tree", "-f", "-a", "--noreport", "-J", "-L", tostring(opts.level), },
     { cwd = opts.tree_dir, }
@@ -167,11 +173,11 @@ M.tree = function(opts)
   --- @type TreeJson[]
   local json = vim.json.decode(obj.stdout)
   if not json[1] then
-    error "[tree.nvim] empty json from the `tree` cli"
+    error "[tree.nvim] empty json from `tree`"
   end
 
   if json[1].type ~= "directory" then
-    error "[tree.nvim] top-level json object is not a directory"
+    error "[tree.nvim] top-level json object from `tree` is not a directory"
   end
 
   --- @type Line[]
@@ -180,19 +186,20 @@ M.tree = function(opts)
   local formatted_lines = {}
 
   local max_line_width = 0
-  local _prev_cursor_abs_path_line = nil
-  local curr_bufname_abs_path_line = nil
+  local prev_cursor_file_line = nil
+  local prev_dir_line = nil
+  local curr_bufname_line = nil
 
   --- @param json_arg TreeJson[]
   --- @param indent number
-  local function build_lines(json_arg, indent)
+  local function populate_lines(json_arg, indent)
     for _, entry in ipairs(json_arg) do
       local name = entry.type == "directory" and entry.name .. "/" or entry.name
 
       local rel_path = vim.fs.normalize(name)
       local abs_path = vim.fs.joinpath(opts.tree_dir, rel_path)
       local basename = vim.fs.basename(abs_path)
-      local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = entry.type, }
+
       local icon_type = entry.type == "directory" and "directory" or "file"
       local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type, }
       local whitespace = ("  "):rep(indent)
@@ -210,21 +217,25 @@ M.tree = function(opts)
       table.insert(lines, line)
       table.insert(formatted_lines, formatted)
 
-      if abs_path == opts._prev_cursor_abs_path then
-        _prev_cursor_abs_path_line = #lines
+      if abs_path == opts._prev_cursor_file then
+        prev_cursor_file_line = #lines
+      end
+
+      if abs_path == opts._prev_dir then
+        prev_dir_line = #lines
       end
 
       if abs_path == curr_bufname_abs_path then
-        curr_bufname_abs_path_line = #lines
+        curr_bufname_line = #lines
       end
 
       if entry.contents then
-        build_lines(entry.contents, indent + 1)
+        populate_lines(entry.contents, indent + 1)
       end
     end
   end
 
-  build_lines(json[1].contents, 0)
+  populate_lines(json[1].contents, 0)
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
@@ -295,46 +306,44 @@ M.tree = function(opts)
   end)()
   vim.api.nvim_win_set_buf(opts._tree_winnr, opts._tree_bufnr)
 
-  if curr_bufname_abs_path_line then
-    vim.api.nvim_buf_set_mark(opts._tree_bufnr, "a", curr_bufname_abs_path_line, 0, {})
+  if curr_bufname_line then
+    vim.api.nvim_buf_set_mark(opts._tree_bufnr, "a", curr_bufname_line, 0, {})
   end
 
-  if _prev_cursor_abs_path_line then
+  if prev_cursor_file_line then
     vim.cmd "normal! gg"
-    vim.api.nvim_win_set_cursor(opts._tree_winnr, { _prev_cursor_abs_path_line, 0, })
-  elseif curr_bufname_abs_path_line then
+    vim.api.nvim_win_set_cursor(opts._tree_winnr, { prev_cursor_file_line, 0, })
+  elseif prev_dir_line then
+    vim.cmd "normal! gg"
+    vim.api.nvim_win_set_cursor(opts._tree_winnr, { prev_dir_line, 0, })
+  elseif curr_bufname_line then
     vim.cmd "normal! gg'a"
-  end
-
-  local get_cursor_abs_path = function()
-    local line_nr = vim.fn.line "."
-    local line = lines[line_nr]
-    return line.abs_path
   end
 
   --- @class RecurseOpts
   --- @field level? number
   --- @field tree_dir? string
-  --- @param ropts? RecurseOpts
-  local recurse = function(ropts)
-    ropts = default(ropts, {})
-    ropts = vim.deepcopy(ropts)
-    ropts.level = default(ropts.level, opts.level)
-    ropts.tree_dir = default(ropts.tree_dir, opts.tree_dir)
+  --- @param r_opts? RecurseOpts
+  local recurse = function(r_opts)
+    r_opts = default(r_opts, {})
+    r_opts = vim.deepcopy(r_opts)
+    r_opts.level = default(r_opts.level, opts.level)
+    r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
+
     M.tree {
-      level = ropts.level,
+      level = r_opts.level,
       _tree_bufnr = opts._tree_bufnr,
-      tree_dir = ropts.tree_dir,
+      tree_dir = r_opts.tree_dir,
       _tree_winnr = opts._tree_winnr,
       keymaps = opts.keymaps,
-      _prev_cursor_abs_path = get_cursor_abs_path(),
+      _prev_cursor_file = lines[vim.fn.line "."].abs_path,
+      _prev_dir = opts.tree_dir,
       icons_enabled = opts.icons_enabled,
       _curr_bufnr = opts._curr_bufnr,
       _curr_winnr = opts._curr_winnr,
       _minimal_tree_win_opts = opts._minimal_tree_win_opts,
       tree_win_opts = opts.tree_win_opts,
     }
-    lines = nil
   end
 
   local inc_level = function()
