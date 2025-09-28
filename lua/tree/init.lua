@@ -524,26 +524,26 @@ M.tree = function(opts)
   end
 
   local keymap_fns = {
-    ["close-tree"] = close_tree,
-    select = select,
-    ["inc-level"] = inc_level,
-    ["dec-level"] = dec_level,
-    ["out-dir"] = out_dir,
-    ["in-dir"] = in_dir,
-    ["yank-rel-path"] = yank_rel_path,
-    ["yank-abs-path"] = yank_abs_path,
-    create = create,
-    refresh = refresh,
-    delete = delete,
-    rename = rename,
+    CloseTree = close_tree,
+    Select = select,
+    IncreaseLevel = inc_level,
+    DecreaseLevel = dec_level,
+    OutDir = out_dir,
+    InDir = in_dir,
+    YankRelativePath = yank_rel_path,
+    YankAbsolutePath = yank_abs_path,
+    Create = create,
+    Refresh = refresh,
+    Delete = delete,
+    Rename = rename,
   }
 
-  for key, map in pairs(opts.keymaps) do
-    vim.keymap.set("n", key, function()
-      keymap_fns[map]()
-    end, { buffer = opts._tree_bufnr, })
+  for action, fn in pairs(keymap_fns) do
+    vim.keymap.set("n", "<Plug>Tree" .. action, fn, {
+      buffer = opts._tree_bufnr,
+      desc = "Tree: " .. action,
+    })
   end
 end
-
 
 return M

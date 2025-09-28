@@ -14,15 +14,13 @@ local T = MiniTest.new_set {
       child.lua [[
         M.tree {
           tree_dir = "./test_dir",
-          keymaps = {
-            ["<cr>"] = "select",
-            ["q"] = "close-tree",
-            ["<"] = "dec-level",
-            [">"] = "inc-level",
-            ["h"] = "out-dir",
-            ["l"] = "in-dir",
-          }
         }
+        vim.keymap.set("n", "<cr>", "<Plug>TreeSelect" )
+        vim.keymap.set("n", "q", "<Plug>TreeCloseTree")
+        vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel")
+        vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel")
+        vim.keymap.set("n", "h", "<Plug>TreeOutDir")
+        vim.keymap.set("n", "l", "<Plug>TreeInDir")
       ]]
     end,
     post_once = child.stop,

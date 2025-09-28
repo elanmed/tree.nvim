@@ -6,6 +6,19 @@ Table of Contents                                     *tree-table-of-contents*
 API ............................................................... |tree-api|
 `tree` ........................................................... |tree-tree|
 Example config ......................................... |tree-example-config|
+Plug remaps ............................................... |tree-plug-remaps|
+`<Plug>TreeCloseTree` ............................. |tree-<plug>treeclosetree|
+`<Plug>TreeSelect` ................................... |tree-<plug>treeselect|
+`<Plug>TreeIncreaseLevel` ..................... |tree-<plug>treeincreaselevel|
+`<Plug>TreeDecreaseLevel` ..................... |tree-<plug>treedecreaselevel|
+`<Plug>TreeOutDir` ................................... |tree-<plug>treeoutdir|
+`<Plug>TreeInDir` ..................................... |tree-<plug>treeindir|
+`<Plug>TreeYankRelativePath` ............... |tree-<plug>treeyankrelativepath|
+`<Plug>TreeYankAbsolutePath` ............... |tree-<plug>treeyankabsolutepath|
+`<Plug>TreeCreate` ................................... |tree-<plug>treecreate|
+`<Plug>TreeDelete` ................................... |tree-<plug>treedelete|
+`<Plug>TreeRename` ................................... |tree-<plug>treerename|
+`<Plug>TreeRefresh` ................................. |tree-<plug>treerefresh|
 
 ==============================================================================
 `TREE.NVIM`                                                   *tree-tree.nvim*
@@ -23,14 +36,10 @@ API                                                                 *tree-api*
 `TREE`                                                             *tree-tree*
 
 >lua
-    --- @class TreeKeymaps
-    --- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-level"|"dec-level"|"yank-rel-path"|"yank-abs-path"|"create"|"refresh"|"delete"|"rename"
-    
     --- @class TreeOpts
     --- @field tree_dir? string
     --- @field level? number
     --- @field tree_win_opts? vim.wo
-    --- @field keymaps TreeKeymaps
     --- @field icons_enabled boolean
     --- ... and some other internal options passed to the recursive calls
     --- @param opts? TreeOpts
@@ -48,22 +57,115 @@ EXAMPLE CONFIG                                           *tree-example-config*
       level = 1,
       icons_enabled = true,
       tree_win_opts = {},
-      -- no keymaps are set by default
-      keymaps = {
-        ["<cr>"] = "select",
-        ["<"] = "dec-level",
-        [">"] = "inc-level",
-        q = "close-tree",
-        h = "out-dir",
-        l = "in-dir",
-        yr = "yank-rel-path",
-        ya = "yank-abs-path",
-        o = "create",
-        e = "refresh",
-        dd = "delete",
-        r = "rename",
-      },
+    })
+    
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = "tree",
+      callback = function(args)
+        vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = args.buf, })
+        vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = args.buf, })
+        vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel", { buffer = args.buf, })
+        vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel", { buffer = args.buf, })
+        vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = args.buf, })
+        vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
+        vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
+        vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
+        vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = args.buf, })
+        vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = args.buf, })
+        vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = args.buf, })
+        vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
+      end,
     })
 <
+
+------------------------------------------------------------------------------
+PLUG REMAPS                                                 *tree-plug-remaps*
+
+
+
+                                                                              
+`<PLUG>TREECLOSETREE`                               *tree-<plug>treeclosetree*
+
+Closes the tree window.
+
+
+                                                                              
+`<PLUG>TREESELECT`                                     *tree-<plug>treeselect*
+
+- If the cursor is on a directory, enter the directory (same as `InDir`)
+- If the cursor is on a file, close the tree window and open the file in the
+  original window
+
+                                                                              
+`<PLUG>TREEINCREASELEVEL`                       *tree-<plug>treeincreaselevel*
+
+Increase the tree depth level by 1
+
+
+                                                                              
+`<PLUG>TREEDECREASELEVEL`                       *tree-<plug>treedecreaselevel*
+
+Decrease the tree depth level by 1
+
+
+                                                                              
+`<PLUG>TREEOUTDIR`                                     *tree-<plug>treeoutdir*
+
+- Navigate to the parent directory of the current tree root and reset the
+  level to 1
+
+                                                                              
+`<PLUG>TREEINDIR`                                       *tree-<plug>treeindir*
+
+- Enter the directory under the cursor and reset level to 1
+
+                                                                              
+`<PLUG>TREEYANKRELATIVEPATH`                 *tree-<plug>treeyankrelativepath*
+
+Copy the relative path (from current working directory) of the file/directory
+under cursor to both the unnamed register and system clipboard
+
+
+                                                                              
+`<PLUG>TREEYANKABSOLUTEPATH`                 *tree-<plug>treeyankabsolutepath*
+
+Copy the absolute path of the file/directory under cursor to both the unnamed
+register and system clipboard
+
+
+                                                                              
+`<PLUG>TREECREATE`                                     *tree-<plug>treecreate*
+
+Create a new file or directory:
+
+- If the path ends with `/`, creates a directory, otherwise a file
+- Creates parent directories as needed
+- Prevents creating an existing path
+- Triggers the `User TreeCreate` autocommand after creation
+- Refreshes the tree
+
+                                                                              
+`<PLUG>TREEDELETE`                                     *tree-<plug>treedelete*
+
+Delete the file or directory under cursor:
+
+- Recursively deletes directories and their contents
+- Triggers the `User TreeDelete` autocommand after deletion
+- Refreshes the tree
+
+                                                                              
+`<PLUG>TREERENAME`                                     *tree-<plug>treerename*
+
+Rename the file or directory under cursor:
+
+- Prevents renaming to existing paths
+- Triggers the `User TreeRename` autocommand after rename
+- Refreshes the tree
+
+                                                                              
+`<PLUG>TREEREFRESH`                                   *tree-<plug>treerefresh*
+
+Refresh the tree to reflect any file system changes
+
 
 vim:tw=78:ts=8:ft=help:norl:

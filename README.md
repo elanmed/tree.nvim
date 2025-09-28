@@ -6,14 +6,10 @@ A simple file tree built with the `tree` cli
 
 ### `tree`
 ```lua
---- @class TreeKeymaps
---- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-level"|"dec-level"|"yank-rel-path"|"yank-abs-path"|"create"|"refresh"|"delete"|"rename"
-
 --- @class TreeOpts
 --- @field tree_dir? string
 --- @field level? number
 --- @field tree_win_opts? vim.wo
---- @field keymaps TreeKeymaps
 --- @field icons_enabled boolean
 --- ... and some other internal options passed to the recursive calls
 --- @param opts? TreeOpts
@@ -28,20 +24,73 @@ require "tree".tree({
   level = 1,
   icons_enabled = true,
   tree_win_opts = {},
-  -- no keymaps are set by default
-  keymaps = {
-    ["<cr>"] = "select",
-    ["<"] = "dec-level",
-    [">"] = "inc-level",
-    q = "close-tree",
-    h = "out-dir",
-    l = "in-dir",
-    yr = "yank-rel-path",
-    ya = "yank-abs-path",
-    o = "create",
-    e = "refresh",
-    dd = "delete",
-    r = "rename",
-  },
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "tree",
+  callback = function(args)
+    vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = args.buf, })
+    vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = args.buf, })
+    vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel", { buffer = args.buf, })
+    vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel", { buffer = args.buf, })
+    vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = args.buf, })
+    vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
+    vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
+    vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
+    vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = args.buf, })
+    vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = args.buf, })
+    vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = args.buf, })
+    vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
+  end,
 })
 ```
+
+## Plug remaps
+
+### `<Plug>TreeCloseTree`
+Closes the tree window.
+
+### `<Plug>TreeSelect`
+- If the cursor is on a directory, enter the directory (same as `InDir`)
+- If the cursor is on a file, close the tree window and open the file in the original window
+
+### `<Plug>TreeIncreaseLevel`
+Increase the tree depth level by 1
+
+### `<Plug>TreeDecreaseLevel`
+Decrease the tree depth level by 1
+
+### `<Plug>TreeOutDir`
+- Navigate to the parent directory of the current tree root and reset the level to 1
+
+### `<Plug>TreeInDir`
+- Enter the directory under the cursor and reset level to 1
+
+### `<Plug>TreeYankRelativePath`
+Copy the relative path (from current working directory) of the file/directory under cursor to both the unnamed register and system clipboard
+
+### `<Plug>TreeYankAbsolutePath`
+Copy the absolute path of the file/directory under cursor to both the unnamed register and system clipboard
+
+### `<Plug>TreeCreate`
+Create a new file or directory:
+- If the path ends with `/`, creates a directory, otherwise a file
+- Creates parent directories as needed
+- Prevents creating an existing path
+- Triggers the `User TreeCreate` autocommand after creation
+- Refreshes the tree
+
+### `<Plug>TreeDelete`
+Delete the file or directory under cursor:
+- Recursively deletes directories and their contents
+- Triggers the `User TreeDelete` autocommand after deletion
+- Refreshes the tree
+
+### `<Plug>TreeRename`
+Rename the file or directory under cursor:
+- Prevents renaming to existing paths
+- Triggers the `User TreeRename` autocommand after rename
+- Refreshes the tree
+
+### `<Plug>TreeRefresh`
+Refresh the tree to reflect any file system changes
