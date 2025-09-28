@@ -472,6 +472,7 @@ M.tree = function(opts)
 
     vim.schedule(refresh)
     vim.cmd "doautocmd User TreeCreate"
+    vim.cmd("edit " .. create_path)
   end
 
   local delete = function()
