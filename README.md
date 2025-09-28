@@ -48,7 +48,7 @@ vim.api.nvim_create_autocmd("FileType", {
 ## Plug remaps
 
 ### `<Plug>TreeCloseTree`
-Closes the tree window.
+Close the tree window
 
 ### `<Plug>TreeSelect`
 - If the cursor is on a directory, enter the directory (same as `InDir`)
@@ -61,36 +61,34 @@ Increase the tree depth level by 1
 Decrease the tree depth level by 1
 
 ### `<Plug>TreeOutDir`
-- Navigate to the parent directory of the current tree root and reset the level to 1
+- Navigate to the parent directory of the current tree root
 
 ### `<Plug>TreeInDir`
-- Enter the directory under the cursor and reset level to 1
+- Enter the directory under the cursor
 
 ### `<Plug>TreeYankRelativePath`
-Copy the relative path (from current working directory) of the file/directory under cursor to both the unnamed register and system clipboard
+Copy the relative path (from the cwd) of the file/directory under the cursor to the unnamed register and system clipboard
 
 ### `<Plug>TreeYankAbsolutePath`
-Copy the absolute path of the file/directory under cursor to both the unnamed register and system clipboard
+Copy the absolute path of the file/directory under the cursor to the unnamed register and system clipboard
 
 ### `<Plug>TreeCreate`
 Create a new file or directory:
-- If the path ends with `/`, creates a directory, otherwise a file
-- Creates parent directories as needed
-- Prevents creating an existing path
-- Triggers the `User TreeCreate` autocommand after creation
-- Refreshes the tree
+- If the path ends with `/`, create a directory, otherwise a file
+- Create parent directories as needed
+- Trigger the `User TreeCreate` autocommand after creation
+- Refresh the tree (`TreeRefresh`)
 
 ### `<Plug>TreeDelete`
-Delete the file or directory under cursor:
-- Recursively deletes directories and their contents
-- Triggers the `User TreeDelete` autocommand after deletion
-- Refreshes the tree
+Delete the file or directory under the cursor:
+- Recursively delete directories and their contents
+- Trigger the `User TreeDelete` autocommand after deletion
+- Refresh the tree (`TreeRefresh`)
 
 ### `<Plug>TreeRename`
-Rename the file or directory under cursor:
-- Prevents renaming to existing paths
-- Triggers the `User TreeRename` autocommand after rename
-- Refreshes the tree
+Rename the file or directory under the cursor:
+- Trigger the `User TreeRename` autocommand after rename
+- Refresh the tree (`TreeRefresh`)
 
 ### `<Plug>TreeRefresh`
 Refresh the tree to reflect any file system changes

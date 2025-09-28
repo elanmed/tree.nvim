@@ -1,4 +1,4 @@
-*tree.txt*                                      Last change: 2025 September 24
+*tree.txt*                                      Last change: 2025 September 27
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
@@ -86,7 +86,7 @@ PLUG REMAPS                                                 *tree-plug-remaps*
                                                                               
 `<PLUG>TREECLOSETREE`                               *tree-<plug>treeclosetree*
 
-Closes the tree window.
+Close the tree window
 
 
                                                                               
@@ -111,25 +111,24 @@ Decrease the tree depth level by 1
                                                                               
 `<PLUG>TREEOUTDIR`                                     *tree-<plug>treeoutdir*
 
-- Navigate to the parent directory of the current tree root and reset the
-  level to 1
+- Navigate to the parent directory of the current tree root
 
                                                                               
 `<PLUG>TREEINDIR`                                       *tree-<plug>treeindir*
 
-- Enter the directory under the cursor and reset level to 1
+- Enter the directory under the cursor
 
                                                                               
 `<PLUG>TREEYANKRELATIVEPATH`                 *tree-<plug>treeyankrelativepath*
 
-Copy the relative path (from current working directory) of the file/directory
-under cursor to both the unnamed register and system clipboard
+Copy the relative path (from the cwd) of the file/directory under the cursor
+to the unnamed register and system clipboard
 
 
                                                                               
 `<PLUG>TREEYANKABSOLUTEPATH`                 *tree-<plug>treeyankabsolutepath*
 
-Copy the absolute path of the file/directory under cursor to both the unnamed
+Copy the absolute path of the file/directory under the cursor to the unnamed
 register and system clipboard
 
 
@@ -138,29 +137,27 @@ register and system clipboard
 
 Create a new file or directory:
 
-- If the path ends with `/`, creates a directory, otherwise a file
-- Creates parent directories as needed
-- Prevents creating an existing path
-- Triggers the `User TreeCreate` autocommand after creation
-- Refreshes the tree
+- If the path ends with `/`, create a directory, otherwise a file
+- Create parent directories as needed
+- Trigger the `User TreeCreate` autocommand after creation
+- Refresh the tree (`TreeRefresh`)
 
                                                                               
 `<PLUG>TREEDELETE`                                     *tree-<plug>treedelete*
 
-Delete the file or directory under cursor:
+Delete the file or directory under the cursor:
 
-- Recursively deletes directories and their contents
-- Triggers the `User TreeDelete` autocommand after deletion
-- Refreshes the tree
+- Recursively delete directories and their contents
+- Trigger the `User TreeDelete` autocommand after deletion
+- Refresh the tree (`TreeRefresh`)
 
                                                                               
 `<PLUG>TREERENAME`                                     *tree-<plug>treerename*
 
-Rename the file or directory under cursor:
+Rename the file or directory under the cursor:
 
-- Prevents renaming to existing paths
-- Triggers the `User TreeRename` autocommand after rename
-- Refreshes the tree
+- Trigger the `User TreeRename` autocommand after rename
+- Refresh the tree (`TreeRefresh`)
 
                                                                               
 `<PLUG>TREEREFRESH`                                   *tree-<plug>treerefresh*
