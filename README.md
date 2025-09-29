@@ -47,48 +47,48 @@ vim.api.nvim_create_autocmd("FileType", {
 
 ## Plug remaps
 
-### `<Plug>TreeCloseTree`
+#### `<Plug>TreeCloseTree`
 Close the tree window
 
-### `<Plug>TreeSelect`
+#### `<Plug>TreeSelect`
 - If the cursor is on a directory, enter the directory (same as `InDir`)
 - If the cursor is on a file, close the tree window and open the file in the original window
 
-### `<Plug>TreeIncreaseLevel`
+#### `<Plug>TreeIncreaseLevel`
 Increase the tree depth level by 1
 
-### `<Plug>TreeDecreaseLevel`
+#### `<Plug>TreeDecreaseLevel`
 Decrease the tree depth level by 1
 
-### `<Plug>TreeOutDir`
+#### `<Plug>TreeOutDir`
 - Navigate to the parent directory of the current tree root
 
-### `<Plug>TreeInDir`
+#### `<Plug>TreeInDir`
 - Enter the directory under the cursor
 
-### `<Plug>TreeYankRelativePath`
+#### `<Plug>TreeYankRelativePath`
 Copy the relative path (from the cwd) of the file/directory under the cursor to the unnamed register and system clipboard
 
-### `<Plug>TreeYankAbsolutePath`
+#### `<Plug>TreeYankAbsolutePath`
 Copy the absolute path of the file/directory under the cursor to the unnamed register and system clipboard
 
-### `<Plug>TreeCreate`
+#### `<Plug>TreeCreate`
 Create a new file or directory:
 - If the path ends with `/`, create a directory, otherwise a file
 - Create parent directories as needed
 - Trigger the `User TreeCreate` autocommand after creation
 - Refresh the tree (`TreeRefresh`)
 
-### `<Plug>TreeDelete`
+#### `<Plug>TreeDelete`
 Delete the file or directory under the cursor:
 - Recursively delete directories and their contents
 - Trigger the `User TreeDelete` autocommand after deletion
 - Refresh the tree (`TreeRefresh`)
 
-### `<Plug>TreeRename`
+#### `<Plug>TreeRename`
 Rename the file or directory under the cursor:
 - Trigger the `User TreeRename` autocommand after rename
 - Refresh the tree (`TreeRefresh`)
 
-### `<Plug>TreeRefresh`
+#### `<Plug>TreeRefresh`
 Refresh the tree to reflect any file system changes
