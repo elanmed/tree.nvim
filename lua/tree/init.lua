@@ -472,7 +472,10 @@ M.tree = function(opts)
 
     vim.schedule(refresh)
     vim.cmd "doautocmd User TreeCreate"
-    vim.cmd("edit " .. create_path)
+
+    vim.api.nvim_win_call(opts._curr_winnr, function()
+      vim.cmd("edit " .. create_path)
+    end)
   end
 
   local delete = function()
