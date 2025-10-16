@@ -492,7 +492,7 @@ M.tree = function(opts)
       return
     end
 
-    vim.schedule(refresh)
+    vim.schedule(function() recurse { tree_dir = vim.fs.dirname(line.abs_path), } end)
     vim.cmd "doautocmd User TreeDelete"
   end
 
@@ -523,7 +523,7 @@ M.tree = function(opts)
       vim.notify("[tree.nvim] vim.fn.rename returned a non-zero value: " .. success, vim.log.levels.ERROR)
       return
     end
-    vim.schedule(refresh)
+    vim.schedule(function() recurse { tree_dir = vim.fs.dirname(rename_path), } end)
     vim.cmd "doautocmd User TreeRename"
   end
 
