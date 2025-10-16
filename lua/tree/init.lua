@@ -131,11 +131,11 @@ M.tree = function(opts)
       return vim.fn.getcwd()
     end
 
-    if vim.fn.isdirectory(curr_bufname_abs_path) == vimscript_true then
-      return curr_bufname_abs_path
+    local dir = curr_bufname_abs_path
+    while vim.fn.isdirectory(dir) == vimscript_false do
+      dir = vim.fs.dirname(dir)
     end
-
-    return vim.fs.dirname(curr_bufname_abs_path)
+    return dir
   end)()
   opts.tree_dir = default(opts.tree_dir, curr_dir)
 
