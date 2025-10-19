@@ -98,8 +98,8 @@ end
 --- @field _minimal_tree_win_opts? table
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
---- @field _prev_cursor_file? string
 --- @field _prev_dir? string
+--- @field _history? string[]
 --- @param opts? TreeOpts
 M.tree = function(opts)
   opts = default(opts, {})
@@ -109,6 +109,7 @@ M.tree = function(opts)
   opts.keymaps = default(opts.keymaps, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
   opts.tree_win_opts = default(opts.tree_win_opts, {})
+  opts._history = default(opts._history, {})
 
   opts._curr_winnr = (function()
     if opts._curr_winnr then
@@ -186,9 +187,14 @@ M.tree = function(opts)
   local formatted_lines = {}
 
   local max_line_width = 0
-  local prev_cursor_file_line = nil
+  --- @type number
   local prev_dir_line = nil
+  --- @type number
   local curr_bufname_line = nil
+
+  --- @type number
+  local history_line = nil
+  local top_history = opts._history[#opts._history]
 
   --- @param json_arg TreeJson[]
   --- @param indent number
@@ -217,16 +223,12 @@ M.tree = function(opts)
       table.insert(lines, line)
       table.insert(formatted_lines, formatted)
 
-      if abs_path == opts._prev_cursor_file then
-        prev_cursor_file_line = #lines
-      end
-
-      if abs_path == opts._prev_dir then
-        prev_dir_line = #lines
-      end
-
       if abs_path == curr_bufname_abs_path then
         curr_bufname_line = #lines
+      elseif abs_path == opts._prev_dir then
+        prev_dir_line = #lines
+      elseif abs_path == top_history then
+        history_line = #lines
       end
 
       if entry.contents then
@@ -235,7 +237,7 @@ M.tree = function(opts)
     end
   end
 
-  populate_lines(json[1].contents, 0)
+  populate_lines(json[1].contents or {}, 0)
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
@@ -306,18 +308,22 @@ M.tree = function(opts)
   end)()
   vim.api.nvim_win_set_buf(opts._tree_winnr, opts._tree_bufnr)
 
-  if curr_bufname_line then
-    vim.api.nvim_buf_set_mark(opts._tree_bufnr, "a", curr_bufname_line, 0, {})
-  end
+  vim.cmd "normal! gg"
+  if history_line then
+    vim.api.nvim_win_set_cursor(opts._tree_winnr, { history_line, 0, })
+    table.remove(opts._history)
+  else
+    local is_in_dir_action = opts._prev_dir and vim.startswith(opts.tree_dir, opts._prev_dir)
+    if is_in_dir_action then
+      opts._history = {}
+    end
 
-  if prev_cursor_file_line then
-    vim.cmd "normal! gg"
-    vim.api.nvim_win_set_cursor(opts._tree_winnr, { prev_cursor_file_line, 0, })
-  elseif prev_dir_line then
-    vim.cmd "normal! gg"
-    vim.api.nvim_win_set_cursor(opts._tree_winnr, { prev_dir_line, 0, })
-  elseif curr_bufname_line then
-    vim.cmd "normal! gg'a"
+    if curr_bufname_line then
+      vim.api.nvim_buf_set_mark(opts._tree_bufnr, "a", curr_bufname_line, 0, {})
+      vim.api.nvim_win_set_cursor(opts._tree_winnr, { curr_bufname_line, 0, })
+    elseif prev_dir_line then
+      vim.api.nvim_win_set_cursor(opts._tree_winnr, { prev_dir_line, 0, })
+    end
   end
 
   --- @class RecurseOpts
@@ -331,18 +337,19 @@ M.tree = function(opts)
     r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
 
     M.tree {
-      level = r_opts.level,
-      _tree_bufnr = opts._tree_bufnr,
       tree_dir = r_opts.tree_dir,
-      _tree_winnr = opts._tree_winnr,
-      keymaps = opts.keymaps,
-      _prev_cursor_file = lines[vim.fn.line "."].abs_path,
-      _prev_dir = opts.tree_dir,
-      icons_enabled = opts.icons_enabled,
-      _curr_bufnr = opts._curr_bufnr,
-      _curr_winnr = opts._curr_winnr,
-      _minimal_tree_win_opts = opts._minimal_tree_win_opts,
+      level = r_opts.level,
       tree_win_opts = opts.tree_win_opts,
+      keymaps = opts.keymaps,
+      icons_enabled = opts.icons_enabled,
+
+      _tree_bufnr = opts._tree_bufnr,
+      _tree_winnr = opts._tree_winnr,
+      _minimal_tree_win_opts = opts._minimal_tree_win_opts,
+      _curr_winnr = opts._curr_winnr,
+      _curr_bufnr = opts._curr_bufnr,
+      _prev_dir = opts.tree_dir,
+      _history = opts._history,
     }
   end
 
@@ -363,6 +370,9 @@ M.tree = function(opts)
   end
 
   local out_dir = function()
+    local line = lines[vim.fn.line "."]
+    if line then table.insert(opts._history, line.abs_path) end
+
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
       level = 1,
