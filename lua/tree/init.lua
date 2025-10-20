@@ -41,7 +41,7 @@ local get_icon_info = function(opts)
   local icon_char, icon_hl = mini_icons.get(opts.type, opts.abs_path)
 
   return {
-    icon_char = icon_char,
+    icon_char = icon_char .. " ",
     icon_hl = icon_hl,
   }
 end
@@ -209,7 +209,7 @@ M.tree = function(opts)
       local icon_type = entry.type == "directory" and "directory" or "file"
       local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type, }
       local whitespace = ("  "):rep(indent)
-      local formatted = ("%s%s %s"):format(whitespace, icon_info.icon_char, basename)
+      local formatted = " " .. whitespace .. icon_info.icon_char .. basename
       max_line_width = math.max(max_line_width, #formatted)
 
       --- @type Line
@@ -245,7 +245,8 @@ M.tree = function(opts)
 
   vim.schedule(function()
     for idx, line in ipairs(lines) do
-      local icon_hl_col_0_indexed = #line.whitespace
+      local leading_space = 1
+      local icon_hl_col_0_indexed = #line.whitespace + leading_space
       local row_1_indexed = idx
       local row_0_indexed = row_1_indexed - 1
       vim.hl.range(

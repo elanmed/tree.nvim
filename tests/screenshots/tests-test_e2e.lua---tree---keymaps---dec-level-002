@@ -1,15 +1,15 @@
 --|---------|---------|---------|
 01|                              
 02|╭tree test_dir/ -L 3─────────╮
-03|│󰉋 dir_a                     │
-04|│  󰉋 dir_c                   │
-05|│    󰌝 index.html            │
-06|│    󰌞 index.js              │
-07|│   init.lua                │
-08|│  󰛦 mod.ts                  │
-09|│󰉋 dir_b                     │
-10|│   .env                    │
-11|│  󱁤 Makefile                │
+03|│ 󰉋 dir_a                    │
+04|│   󰉋 dir_c                  │
+05|│     󰌝 index.html           │
+06|│     󰌞 index.js             │
+07|│    init.lua               │
+08|│   󰛦 mod.ts                 │
+09|│ 󰉋 dir_b                    │
+10|│    .env                   │
+11|│   󱁤 Makefile               │
 12|╰────────────────────────────╯
 13|~                             
 14|~                             
