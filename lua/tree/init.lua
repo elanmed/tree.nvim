@@ -382,6 +382,7 @@ M.tree = function(opts)
 
   local in_dir = function()
     local line = lines[vim.fn.line "."]
+    if not line then return end
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       recurse {
         tree_dir = line.abs_path,
@@ -396,6 +397,7 @@ M.tree = function(opts)
 
   local select = function()
     local line = lines[vim.fn.line "."]
+    if not line then return end
 
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       in_dir()
@@ -409,6 +411,7 @@ M.tree = function(opts)
 
   local yank_abs_path = function()
     local line = lines[vim.fn.line "."]
+    if not line then return end
     vim.fn.setreg("", line.abs_path)
     vim.fn.setreg("+", line.abs_path)
     vim.notify(("[tree.nvim] absolute path yanked: %s"):format(line.abs_path), vim.log.levels.INFO)
@@ -416,6 +419,7 @@ M.tree = function(opts)
 
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
+    if not line then return end
     local cwd = vim.fn.getcwd()
     local rel_path = vim.fs.relpath(cwd, line.abs_path)
     vim.fn.setreg("", rel_path)
@@ -429,7 +433,13 @@ M.tree = function(opts)
 
   local create = function()
     local line = lines[vim.fn.line "."]
-    local dirname = vim.fs.dirname(vim.fs.relpath(vim.fn.getcwd(), line.abs_path))
+    local dirname = (function()
+      if line then
+        return vim.fs.dirname(vim.fs.relpath(vim.fn.getcwd(), line.abs_path))
+      end
+      return vim.fn.getcwd()
+    end)()
+
     local create_path = vim.fn.input("Create a file or directory: ", dirname .. "/")
     if create_path == "" then
       vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
@@ -491,6 +501,7 @@ M.tree = function(opts)
 
   local delete = function()
     local line = lines[vim.fn.line "."]
+    if not line then return end
     local option = vim.fn.confirm(("Delete? %s"):format(line.abs_path), "&Yes\n&No", 2)
     if option == 2 then
       vim.notify("[tree.nvim] Aborting delete", vim.log.levels.INFO)
@@ -509,6 +520,7 @@ M.tree = function(opts)
 
   local rename = function()
     local line = lines[vim.fn.line "."]
+    if not line then return end
     local rename_path = vim.fn.input("Rename to: ", line.abs_path)
     if rename_path == "" then
       vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
