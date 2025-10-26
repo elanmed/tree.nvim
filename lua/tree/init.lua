@@ -441,7 +441,7 @@ M.tree = function(opts)
     end
 
     local option = vim.fn.confirm(("Create %s?"):format(create_path), "&Yes\n&No", 2)
-    if option == 2 then
+    if option ~= 1 then
       vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
       return
     end
@@ -494,22 +494,51 @@ M.tree = function(opts)
   end
 
   local delete = function()
-    local line = lines[vim.fn.line "."]
-    if not line then return end
-    local option = vim.fn.confirm(("Delete? %s"):format(line.abs_path), "&Yes\n&No", 2)
-    if option == 2 then
-      vim.notify("[tree.nvim] Aborting delete", vim.log.levels.INFO)
-      return
+    --- @param lines_arg Line[]
+    local delete_lines = function(lines_arg)
+      local abs_path_tbl = {}
+      for _, line in ipairs(lines_arg) do
+        table.insert(abs_path_tbl, line.abs_path)
+      end
+      local abs_path_str = table.concat(abs_path_tbl, "\n")
+
+      local option = vim.fn.confirm(("Delete? \n%s"):format(abs_path_str), "&Yes\n&No", 2)
+      if option ~= 1 then
+        vim.notify("[tree.nvim] Aborting delete", vim.log.levels.INFO)
+        return
+      end
+
+      for _, line in ipairs(lines_arg) do
+        local success = vim.fn.delete(line.abs_path, "rf")
+        if success == -1 then
+          vim.notify(
+            ("[tree.nvim] vim.fn.delete %s returned -1"):format(line.abs_path),
+            vim.log.levels.ERROR
+          )
+        end
+      end
+
+      vim.schedule(recurse)
+      vim.cmd "doautocmd User TreeDelete"
     end
 
-    local success = vim.fn.delete(line.abs_path, "rf")
-    if success == -1 then
-      vim.notify("[tree.nvim] vim.fn.delete returned -1", vim.log.levels.ERROR)
-      return
-    end
+    --- @type string
+    local curr_mode = vim.fn.mode()
+    if curr_mode == "v" or curr_mode == "V" then
+      local start_line = vim.fn.line "."
+      local end_line = vim.fn.line "v"
+      if start_line > end_line then
+        start_line = vim.fn.line "v"
+        end_line = vim.fn.line "."
+      end
 
-    vim.schedule(function() recurse { tree_dir = vim.fs.dirname(line.abs_path), } end)
-    vim.cmd "doautocmd User TreeDelete"
+      if not lines[start_line] or not lines[end_line] then return end
+      delete_lines(vim.list_slice(lines, start_line, end_line))
+    else
+      local line = lines[vim.fn.line "."]
+      if not line then return end
+      delete_lines { line, }
+    end
   end
 
   local rename = function()
@@ -522,7 +551,7 @@ M.tree = function(opts)
     end
 
     local option = vim.fn.confirm(("Rename %s -> %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
-    if option == 2 then
+    if option ~= 1 then
       vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
       return
     end
@@ -565,6 +594,11 @@ M.tree = function(opts)
       desc = "Tree: " .. action,
     })
   end
+
+  vim.keymap.set("v", "<Plug>TreeDelete", keymap_fns["Delete"], {
+    buffer = opts._tree_bufnr,
+    desc = "Tree: Delete",
+  })
 end
 
 return M
