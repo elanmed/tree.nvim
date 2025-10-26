@@ -262,7 +262,8 @@ M.tree = function(opts)
   local width_padding = 10
 
   opts._tree_winnr = (function()
-    local title = ("tree %s/ -L %s"):format(vim.fs.basename(opts.tree_dir), opts.level)
+    local dirname = vim.fs.joinpath(".", vim.fs.basename(opts.tree_dir), "/")
+    local title = ("tree %s -L %s"):format(dirname, opts.level)
     local border_height = 2
     local width = math.max(#title, max_line_width + width_padding)
     local editor_height = vim.api.nvim_win_get_height(opts._curr_winnr)
@@ -432,7 +433,7 @@ M.tree = function(opts)
   end
 
   local create = function()
-    local dirname = "./" .. vim.fs.basename(opts.tree_dir) .. "/"
+    local dirname = vim.fs.joinpath(".", vim.fs.basename(opts.tree_dir), "/")
     local create_path = vim.fn.input("Create a file or directory: ", dirname)
     if create_path == "" then
       vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
