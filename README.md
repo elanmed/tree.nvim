@@ -39,8 +39,11 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
     vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = args.buf, })
     vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = args.buf, })
-    vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = args.buf, })
     vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
+    vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = args.buf, })
+
+    -- delete multiple items
+    vim.keymap.set("v", "d", "<Plug>TreeDelete", { buffer = args.buf, })
   end,
 })
 ```
@@ -80,7 +83,7 @@ Create a new file or directory:
 - Refresh the tree (`TreeRefresh`)
 
 #### `<Plug>TreeDelete`
-Delete the file or directory under the cursor:
+Delete the file or directory under the cursor or visual selection:
 - Recursively delete directories and their contents
 - Trigger the `User TreeDelete` autocommand after deletion
 - Refresh the tree (`TreeRefresh`)
