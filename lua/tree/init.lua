@@ -262,7 +262,7 @@ M.tree = function(opts)
   local width_padding = 10
 
   opts._tree_winnr = (function()
-    local dirname = vim.fs.joinpath(".", vim.fs.basename(opts.tree_dir), "/")
+    local dirname = vim.fs.joinpath(vim.fs.basename(opts.tree_dir), "/")
     local title = ("tree %s -L %s"):format(dirname, opts.level)
     local border_height = 2
     local width = math.max(#title, max_line_width + width_padding)
