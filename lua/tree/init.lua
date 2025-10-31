@@ -91,8 +91,8 @@ end
 --- @field tree_dir? string
 --- @field level? number
 --- @field tree_win_opts? vim.wo
---- @field keymaps TreeKeymaps
---- @field icons_enabled boolean
+--- @field icons_enabled? boolean
+--- @field tree_win_config? table
 --- @field _tree_bufnr? number
 --- @field _tree_winnr? number
 --- @field _minimal_tree_win_opts? table
@@ -106,9 +106,9 @@ M.tree = function(opts)
   opts = vim.deepcopy(opts)
 
   opts.level = default(opts.level, 1)
-  opts.keymaps = default(opts.keymaps, {})
   opts.icons_enabled = default(opts.icons_enabled, true)
   opts.tree_win_opts = default(opts.tree_win_opts, {})
+  opts.tree_win_config = default(opts.tree_win_config, {})
   opts._history = default(opts._history, {})
 
   opts._curr_winnr = (function()
@@ -279,7 +279,7 @@ M.tree = function(opts)
       return opts._tree_winnr
     end
 
-    local tree_winnr = vim.api.nvim_open_win(opts._tree_bufnr, true, {
+    local win_config = vim.tbl_deep_extend("force", {
       relative = "editor",
       row = 1,
       col = 0,
@@ -288,7 +288,8 @@ M.tree = function(opts)
       border = "rounded",
       style = "minimal",
       title = title,
-    })
+    }, opts.tree_win_config)
+    local tree_winnr = vim.api.nvim_open_win(opts._tree_bufnr, true, win_config)
     vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
     vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
     set_opts(tree_winnr, opts.tree_win_opts)
@@ -342,8 +343,8 @@ M.tree = function(opts)
       tree_dir = r_opts.tree_dir,
       level = r_opts.level,
       tree_win_opts = opts.tree_win_opts,
-      keymaps = opts.keymaps,
       icons_enabled = opts.icons_enabled,
+      tree_win_config = opts.tree_win_config,
 
       _tree_bufnr = opts._tree_bufnr,
       _tree_winnr = opts._tree_winnr,

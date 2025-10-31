@@ -9,8 +9,9 @@ A simple file tree built with the `tree` cli
 --- @class TreeOpts
 --- @field tree_dir? string
 --- @field level? number
---- @field tree_win_opts? vim.wo
---- @field icons_enabled boolean
+--- @field tree_win_opts? vim.wo options to apply to the tree window
+--- @field tree_win_config? table configuration passed to `nvim_open_win`
+--- @field icons_enabled? boolean
 --- ... and some other internal options passed to the recursive calls
 --- @param opts? TreeOpts
 M.tree = function(opts) end
@@ -24,6 +25,7 @@ require "tree".tree({
   level = 1,
   icons_enabled = true,
   tree_win_opts = {},
+  tree_win_config = {},
 })
 
 vim.api.nvim_create_autocmd("FileType", {
