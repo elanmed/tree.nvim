@@ -2,6 +2,8 @@
 
 A simple file tree built with the `tree` cli
 
+![demo](https://elanmed.dev/nvim-plugins/tree.png)
+
 ## API
 
 ### `tree`
