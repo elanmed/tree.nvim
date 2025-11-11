@@ -223,12 +223,14 @@ M.tree = function(opts)
       table.insert(lines, line)
       table.insert(formatted_lines, formatted)
 
+      if abs_path == top_history then
+        history_line = #lines
+      end
+
       if abs_path == curr_bufname_abs_path then
         curr_bufname_line = #lines
       elseif abs_path == opts._prev_dir then
         prev_dir_line = #lines
-      elseif abs_path == top_history then
-        history_line = #lines
       end
 
       if entry.contents then
