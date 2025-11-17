@@ -439,7 +439,7 @@ M.tree = function(opts)
 
     close_tree()
     vim.api.nvim_set_current_win(opts._curr_winnr)
-    vim.cmd("edit " .. line.abs_path)
+    vim.cmd.edit(line.abs_path)
   end
 
   local yank_abs_path = function()
@@ -522,7 +522,7 @@ M.tree = function(opts)
     vim.cmd "doautocmd User TreeCreate"
 
     vim.api.nvim_win_call(opts._curr_winnr, function()
-      vim.cmd("edit " .. create_path)
+      vim.cmd.edit(create_path)
     end)
   end
 
