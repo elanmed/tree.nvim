@@ -85,8 +85,7 @@ end
 --- @field contents TreeJson[]
 --- @field target string
 
---- @class TreeKeymaps
---- @field [string] "close-tree"|"select"|"out-dir"|"in-dir"|"inc-level"|"dec-level"|"yank-abs-path"|"yank-rel-path"
+--- @alias TreeAction "open"|"out-dir"|"in-dir"|"refresh"
 
 --- @class TreeOpts
 --- @field tree_dir? string
@@ -98,7 +97,8 @@ end
 --- @field _minimal_tree_win_opts? table
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
---- @field _prev_dir? string
+--- @field _prev_line? string
+--- @field _action? TreeAction
 --- @field _history? string[]
 --- @param opts? TreeOpts
 M.tree = function(opts)
@@ -110,6 +110,7 @@ M.tree = function(opts)
   opts.tree_win_opts = default(opts.tree_win_opts, {})
   opts.tree_win_config = default(opts.tree_win_config, {})
   opts._history = default(opts._history, {})
+  opts._action = default(opts._action, "open")
 
   opts._curr_winnr = (function()
     if opts._curr_winnr then
@@ -188,13 +189,21 @@ M.tree = function(opts)
 
   local max_line_width = 0
   --- @type number
-  local prev_dir_line = nil
+  local prev_dir_idx = nil
   --- @type number
-  local curr_bufname_line = nil
+  local curr_bufname_idx = nil
+  --- @type number
+  local prev_line_idx = nil
 
   --- @type number
   local history_line = nil
   local top_history = opts._history[#opts._history]
+  local prev_dir = (function()
+    if opts._prev_line then
+      return vim.fs.dirname(opts._prev_line)
+    end
+    return nil
+  end)()
 
   --- @param json_arg TreeJson[]
   --- @param indent number
@@ -228,9 +237,15 @@ M.tree = function(opts)
       end
 
       if abs_path == curr_bufname_abs_path then
-        curr_bufname_line = #lines
-      elseif abs_path == opts._prev_dir then
-        prev_dir_line = #lines
+        curr_bufname_idx = #lines
+      end
+
+      if abs_path == prev_dir then
+        prev_dir_idx = #lines
+      end
+
+      if abs_path == opts._prev_line then
+        prev_line_idx = #lines
       end
 
       if entry.contents then
@@ -314,37 +329,45 @@ M.tree = function(opts)
   end)()
   vim.api.nvim_win_set_buf(vim.g.tree_winnr, opts._tree_bufnr)
 
-  vim.cmd "normal! gg"
-  if history_line then
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { history_line, 0, })
-    table.remove(opts._history)
-  else
-    local is_in_dir_action = opts._prev_dir and vim.startswith(opts.tree_dir, opts._prev_dir)
-    if is_in_dir_action then
+  if opts._action == "open" then
+    if curr_bufname_idx then
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx, 0, })
+    end
+  elseif opts._action == "in-dir" then
+    if history_line then
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { history_line, 0, })
+      table.remove(opts._history)
+    else
       opts._history = {}
     end
-
-    if curr_bufname_line then
-      vim.api.nvim_buf_set_mark(opts._tree_bufnr, "a", curr_bufname_line, 0, {})
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_line, 0, })
-    elseif prev_dir_line then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_line, 0, })
-    end
+  elseif opts._action == "out-dir" then
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_idx, 0, })
+  elseif opts._action == "refresh" then
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_line_idx, 0, })
   end
 
   --- @class RecurseOpts
   --- @field level? number
   --- @field tree_dir? string
-  --- @param r_opts? RecurseOpts
+  --- @field action TreeAction
+
+  --- @param r_opts RecurseOpts
   local recurse = function(r_opts)
-    r_opts = default(r_opts, {})
     r_opts = vim.deepcopy(r_opts)
     r_opts.level = default(r_opts.level, opts.level)
     r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
 
+    local prev_line = (function()
+      local line = lines[vim.fn.line "."]
+      if line then return line.abs_path end
+      return nil
+    end)()
+
     M.tree {
       tree_dir = r_opts.tree_dir,
       level = r_opts.level,
+      _action = r_opts.action,
+
       tree_win_opts = opts.tree_win_opts,
       icons_enabled = opts.icons_enabled,
       tree_win_config = opts.tree_win_config,
@@ -353,14 +376,15 @@ M.tree = function(opts)
       _minimal_tree_win_opts = opts._minimal_tree_win_opts,
       _curr_winnr = opts._curr_winnr,
       _curr_bufnr = opts._curr_bufnr,
-      _prev_dir = opts.tree_dir,
       _history = opts._history,
+      _prev_line = prev_line,
     }
   end
 
   local inc_level = function()
     recurse {
       level = opts.level + 1,
+      action = "refresh",
     }
   end
 
@@ -371,6 +395,7 @@ M.tree = function(opts)
     end
     recurse {
       level = opts.level - 1,
+      action = "refresh",
     }
   end
 
@@ -381,6 +406,7 @@ M.tree = function(opts)
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
       level = 1,
+      action = "out-dir",
     }
   end
 
@@ -391,6 +417,7 @@ M.tree = function(opts)
       recurse {
         tree_dir = line.abs_path,
         level = 1,
+        action = "in-dir",
       }
     end
   end
@@ -434,7 +461,7 @@ M.tree = function(opts)
   end
 
   local refresh = function()
-    recurse()
+    recurse { action = "refresh", }
   end
 
   local create = function()
@@ -524,7 +551,7 @@ M.tree = function(opts)
         end
       end
 
-      vim.schedule(recurse)
+      vim.schedule(function() recurse { action = "refresh", } end)
       vim.cmd "doautocmd User TreeDelete"
     end
 
@@ -575,7 +602,7 @@ M.tree = function(opts)
       vim.notify("[tree.nvim] vim.fn.rename returned a non-zero value: " .. success, vim.log.levels.ERROR)
       return
     end
-    vim.schedule(function() recurse { tree_dir = vim.fs.dirname(rename_path), } end)
+    vim.schedule(function() recurse { tree_dir = vim.fs.dirname(rename_path), action = "open", } end)
     vim.cmd "doautocmd User TreeRename"
   end
 
