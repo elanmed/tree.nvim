@@ -48,23 +48,6 @@ local get_icon_info = function(opts)
 end
 
 --- @param winnr number
-local get_minimal_opts = function(winnr)
-  -- :help nvim_open_win
-  local minimal_opts_to_get = {
-    "number", "relativenumber", "cursorline", "cursorcolumn",
-    "foldcolumn", "spell", "list", "signcolumn", "colorcolumn",
-    "statuscolumn", "fillchars", "winhighlight",
-  }
-
-  local saved_minimal_opts = {}
-  for _, opt in ipairs(minimal_opts_to_get) do
-    saved_minimal_opts[opt] = vim.api.nvim_get_option_value(opt, { win = winnr, })
-  end
-
-  return saved_minimal_opts
-end
-
---- @param winnr number
 --- @param opts vim.wo
 local set_opts = function(winnr, opts)
   for opt, value in pairs(opts) do
@@ -94,7 +77,6 @@ end
 --- @field icons_enabled? boolean
 --- @field tree_win_config? table
 --- @field _tree_bufnr? number
---- @field _minimal_tree_win_opts? table
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
 --- @field _prev_line? string
@@ -311,19 +293,6 @@ M.tree = function(opts)
     vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
     vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
     set_opts(tree_winnr, opts.tree_win_opts)
-    opts._minimal_tree_win_opts = get_minimal_opts(tree_winnr)
-
-    vim.api.nvim_create_autocmd("BufWinEnter", {
-      callback = function()
-        if not vim.api.nvim_win_is_valid(tree_winnr) then return end
-        if vim.api.nvim_get_current_win() ~= tree_winnr then return end
-        if vim.api.nvim_get_current_buf() ~= opts._tree_bufnr then
-          vim.api.nvim_win_set_buf(tree_winnr, opts._tree_bufnr)
-        end
-        set_opts(tree_winnr, opts._minimal_tree_win_opts)
-        set_opts(tree_winnr, opts.tree_win_opts)
-      end,
-    })
 
     return tree_winnr
   end)()
@@ -373,7 +342,6 @@ M.tree = function(opts)
       tree_win_config = opts.tree_win_config,
 
       _tree_bufnr = opts._tree_bufnr,
-      _minimal_tree_win_opts = opts._minimal_tree_win_opts,
       _curr_winnr = opts._curr_winnr,
       _curr_bufnr = opts._curr_bufnr,
       _history = opts._history,
