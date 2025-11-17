@@ -4,6 +4,7 @@ local vimscript_true = 1
 local vimscript_false = 0
 
 local ns_id = vim.api.nvim_create_namespace "Tree"
+vim.g.tree_winnr = -1
 
 --- @generic T
 --- @param val T | nil
@@ -94,7 +95,6 @@ end
 --- @field icons_enabled? boolean
 --- @field tree_win_config? table
 --- @field _tree_bufnr? number
---- @field _tree_winnr? number
 --- @field _minimal_tree_win_opts? table
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
@@ -263,7 +263,7 @@ M.tree = function(opts)
 
   local width_padding = 10
 
-  opts._tree_winnr = (function()
+  vim.g.tree_winnr = (function()
     local dirname = vim.fs.joinpath(vim.fs.basename(opts.tree_dir), "/")
     local title = ("tree %s -L %s"):format(dirname, opts.level)
     local border_height = 2
@@ -272,13 +272,14 @@ M.tree = function(opts)
     local height = math.min(#lines, editor_height - border_height)
     if height < 1 then height = 1 end
 
-    if opts._tree_winnr and vim.api.nvim_win_is_valid(opts._tree_winnr) then
-      vim.api.nvim_win_set_config(opts._tree_winnr, {
+    if vim.api.nvim_win_is_valid(vim.g.tree_winnr) then
+      vim.api.nvim_set_current_win(vim.g.tree_winnr)
+      vim.api.nvim_win_set_config(vim.g.tree_winnr, {
         title = title,
         width = width,
         height = height,
       })
-      return opts._tree_winnr
+      return vim.g.tree_winnr
     end
 
     local win_config = vim.tbl_deep_extend("force", {
@@ -311,11 +312,11 @@ M.tree = function(opts)
 
     return tree_winnr
   end)()
-  vim.api.nvim_win_set_buf(opts._tree_winnr, opts._tree_bufnr)
+  vim.api.nvim_win_set_buf(vim.g.tree_winnr, opts._tree_bufnr)
 
   vim.cmd "normal! gg"
   if history_line then
-    vim.api.nvim_win_set_cursor(opts._tree_winnr, { history_line, 0, })
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { history_line, 0, })
     table.remove(opts._history)
   else
     local is_in_dir_action = opts._prev_dir and vim.startswith(opts.tree_dir, opts._prev_dir)
@@ -325,9 +326,9 @@ M.tree = function(opts)
 
     if curr_bufname_line then
       vim.api.nvim_buf_set_mark(opts._tree_bufnr, "a", curr_bufname_line, 0, {})
-      vim.api.nvim_win_set_cursor(opts._tree_winnr, { curr_bufname_line, 0, })
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_line, 0, })
     elseif prev_dir_line then
-      vim.api.nvim_win_set_cursor(opts._tree_winnr, { prev_dir_line, 0, })
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_line, 0, })
     end
   end
 
@@ -349,7 +350,6 @@ M.tree = function(opts)
       tree_win_config = opts.tree_win_config,
 
       _tree_bufnr = opts._tree_bufnr,
-      _tree_winnr = opts._tree_winnr,
       _minimal_tree_win_opts = opts._minimal_tree_win_opts,
       _curr_winnr = opts._curr_winnr,
       _curr_bufnr = opts._curr_bufnr,
@@ -396,7 +396,9 @@ M.tree = function(opts)
   end
 
   local close_tree = function()
-    vim.api.nvim_win_close(opts._tree_winnr, true)
+    if vim.api.nvim_win_is_valid(vim.g.tree_winnr) then
+      vim.api.nvim_win_close(vim.g.tree_winnr, true)
+    end
   end
 
   local select = function()
