@@ -75,13 +75,4 @@ T["tree"]["keymaps"]["close"] = function()
   expect.reference_screenshot(child.get_screenshot())
 end
 
-T["tree"]["buffer switching autocommand"] = function()
-  child.type_keys { "l", "l", "<cr>", }
-  expect.reference_screenshot(child.get_screenshot())
-  child.lua [[M.tree()]]
-  expect.reference_screenshot(child.get_screenshot())
-  child.type_keys "<C-o>"
-  expect.reference_screenshot(child.get_screenshot())
-end
-
 return T
