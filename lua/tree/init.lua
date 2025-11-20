@@ -68,7 +68,7 @@ end
 --- @field contents TreeJson[]
 --- @field target string
 
---- @alias TreeAction "open"|"out-dir"|"in-dir"|"refresh"
+--- @alias TreeAction "open"|"out-dir"|"in-dir"|"refresh"|"create"
 
 --- @class TreeOpts
 --- @field tree_dir? string
@@ -79,9 +79,12 @@ end
 --- @field _tree_bufnr? number
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
---- @field _prev_line? string
+--- @field _prev_dir? string
+--- @field _prev_line_idx? number
+--- @field _created_path? string
 --- @field _action? TreeAction
 --- @field _history? string[]
+
 --- @param opts? TreeOpts
 M.tree = function(opts)
   opts = default(opts, {})
@@ -166,26 +169,24 @@ M.tree = function(opts)
 
   --- @type Line[]
   local lines = {}
+
   --- @type string[]
   local formatted_lines = {}
 
   local max_line_width = 0
+
   --- @type number
   local prev_dir_idx = nil
+
   --- @type number
   local curr_bufname_idx = nil
+
   --- @type number
-  local prev_line_idx = nil
+  local created_path_idx = nil
 
   --- @type number
   local history_line = nil
   local top_history = opts._history[#opts._history]
-  local prev_dir = (function()
-    if opts._prev_line then
-      return vim.fs.dirname(opts._prev_line)
-    end
-    return nil
-  end)()
 
   --- @param json_arg TreeJson[]
   --- @param indent number
@@ -222,12 +223,12 @@ M.tree = function(opts)
         curr_bufname_idx = #lines
       end
 
-      if abs_path == prev_dir then
+      if abs_path == opts._prev_dir then
         prev_dir_idx = #lines
       end
 
-      if abs_path == opts._prev_line then
-        prev_line_idx = #lines
+      if abs_path == opts._created_path then
+        created_path_idx = #lines
       end
 
       if entry.contents then
@@ -312,12 +313,25 @@ M.tree = function(opts)
   elseif opts._action == "out-dir" then
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_idx, 0, })
   elseif opts._action == "refresh" then
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_line_idx, 0, })
+    local row = (function()
+      if #lines == 0 then return 1 end
+      if opts._prev_line_idx == nil then return 1 end
+      if opts._prev_line_idx > #lines then
+        return opts._prev_line_idx - 1
+      end
+      return opts._prev_line_idx
+    end)()
+
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { row, 0, })
+  elseif opts._action == "create" then
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { created_path_idx, 0, })
   end
 
   --- @class RecurseOpts
   --- @field level? number
   --- @field tree_dir? string
+  --- @field created_path? string
+  --- @field prev_dir? string
   --- @field action TreeAction
 
   --- @param r_opts RecurseOpts
@@ -326,16 +340,12 @@ M.tree = function(opts)
     r_opts.level = default(r_opts.level, opts.level)
     r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
 
-    local prev_line = (function()
-      local line = lines[vim.fn.line "."]
-      if line then return line.abs_path end
-      return nil
-    end)()
-
     M.tree {
       tree_dir = r_opts.tree_dir,
       level = r_opts.level,
       _action = r_opts.action,
+      _created_path = r_opts.created_path,
+      _prev_dir = r_opts.prev_dir,
 
       tree_win_opts = opts.tree_win_opts,
       icons_enabled = opts.icons_enabled,
@@ -345,7 +355,7 @@ M.tree = function(opts)
       _curr_winnr = opts._curr_winnr,
       _curr_bufnr = opts._curr_bufnr,
       _history = opts._history,
-      _prev_line = prev_line,
+      _prev_line_idx = vim.fn.line ".",
     }
   end
 
@@ -371,8 +381,12 @@ M.tree = function(opts)
     local line = lines[vim.fn.line "."]
     if line then table.insert(opts._history, line.abs_path) end
 
+    local prev_dir
+    if line then prev_dir = vim.fs.dirname(line.abs_path) end
+
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
+      prev_dir = prev_dir,
       level = 1,
       action = "out-dir",
     }
@@ -462,7 +476,12 @@ M.tree = function(opts)
         return
       end
 
-      vim.schedule(refresh)
+      vim.schedule(function()
+        recurse {
+          action = "create",
+          created_path = vim.fs.joinpath(vim.fn.getcwd(), create_path),
+        }
+      end)
       return
     end
 
@@ -486,7 +505,12 @@ M.tree = function(opts)
       return
     end
 
-    vim.schedule(refresh)
+    vim.schedule(function()
+      recurse {
+        action = "create",
+        created_path = vim.fs.joinpath(vim.fn.getcwd(), create_path),
+      }
+    end)
     vim.cmd "doautocmd User TreeCreate"
 
     vim.api.nvim_win_call(opts._curr_winnr, function()
@@ -570,7 +594,7 @@ M.tree = function(opts)
       vim.notify("[tree.nvim] vim.fn.rename returned a non-zero value: " .. success, vim.log.levels.ERROR)
       return
     end
-    vim.schedule(function() recurse { tree_dir = vim.fs.dirname(rename_path), action = "open", } end)
+    vim.schedule(function() recurse { action = "refresh", } end)
     vim.cmd "doautocmd User TreeRename"
   end
 
