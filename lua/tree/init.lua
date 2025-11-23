@@ -314,12 +314,18 @@ M.tree = function(opts)
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_idx, 0, })
   elseif opts._action == "refresh" then
     local row = (function()
-      if #lines == 0 then return 1 end
       if opts._prev_line_idx == nil then return 1 end
-      if opts._prev_line_idx > #lines then
-        return opts._prev_line_idx - 1
+
+      local prev_line_idx = opts._prev_line_idx
+      while prev_line_idx > #lines do
+        prev_line_idx = prev_line_idx - 1
       end
-      return opts._prev_line_idx
+
+      if prev_line_idx == 0 then
+        prev_line_idx = 1
+      end
+
+      return prev_line_idx
     end)()
 
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { row, 0, })
