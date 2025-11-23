@@ -21,6 +21,12 @@ local T = MiniTest.new_set {
         vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel")
         vim.keymap.set("n", "h", "<Plug>TreeOutDir")
         vim.keymap.set("n", "l", "<Plug>TreeInDir")
+        vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath")
+        vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath")
+        vim.keymap.set("n", "o", "<Plug>TreeCreate")
+        vim.keymap.set("n", "e", "<Plug>TreeRefresh")
+        vim.keymap.set("n", "r", "<Plug>TreeRename")
+        vim.keymap.set("n", "dd", "<Plug>TreeDelete")
       ]]
     end,
     post_once = child.stop,
@@ -29,15 +35,15 @@ local T = MiniTest.new_set {
 
 T["tree"] = MiniTest.new_set()
 
-T["tree"]["keymaps"] = MiniTest.new_set()
-T["tree"]["keymaps"]["inc-level"] = function()
+T["tree"] = MiniTest.new_set()
+T["tree"]["inc-level"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["keymaps"]["dec-level"] = function()
+T["tree"]["dec-level"] = function()
   child.type_keys { ">", ">", }
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
@@ -46,14 +52,14 @@ T["tree"]["keymaps"]["dec-level"] = function()
   child.type_keys "<"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["keymaps"]["in-dir"] = function()
+T["tree"]["in-dir"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys { "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "l"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["keymaps"]["out-dir"] = function()
+T["tree"]["out-dir"] = function()
   child.type_keys { "l", "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "h"
@@ -61,7 +67,7 @@ T["tree"]["keymaps"]["out-dir"] = function()
   child.type_keys "h"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["keymaps"]["select"] = function()
+T["tree"]["select"] = function()
   child.type_keys { "l", "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "<cr>"
@@ -69,7 +75,7 @@ T["tree"]["keymaps"]["select"] = function()
   child.lua [[M.tree()]]
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["keymaps"]["close"] = function()
+T["tree"]["close"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "q"
   expect.reference_screenshot(child.get_screenshot())
