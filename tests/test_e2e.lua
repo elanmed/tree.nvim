@@ -35,15 +35,15 @@ local T = MiniTest.new_set {
 
 T["tree"] = MiniTest.new_set()
 
-T["tree"] = MiniTest.new_set()
-T["tree"]["inc-level"] = function()
+T["tree"]["plug remaps"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeIncreaseLevel"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["dec-level"] = function()
+T["tree"]["plug remaps"]["TreeDecreaseLevel"] = function()
   child.type_keys { ">", ">", }
   child.type_keys ">"
   expect.reference_screenshot(child.get_screenshot())
@@ -52,14 +52,14 @@ T["tree"]["dec-level"] = function()
   child.type_keys "<"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["in-dir"] = function()
+T["tree"]["plug remaps"]["TreeInDir"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys { "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "l"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["out-dir"] = function()
+T["tree"]["plug remaps"]["TreeOutDir"] = function()
   child.type_keys { "l", "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "h"
@@ -67,7 +67,7 @@ T["tree"]["out-dir"] = function()
   child.type_keys "h"
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["select"] = function()
+T["tree"]["plug remaps"]["TreeSelect"] = function()
   child.type_keys { "l", "l", }
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "<cr>"
@@ -75,7 +75,7 @@ T["tree"]["select"] = function()
   child.lua [[M.tree()]]
   expect.reference_screenshot(child.get_screenshot())
 end
-T["tree"]["close"] = function()
+T["tree"]["plug remaps"]["TreeCloseTree"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "q"
   expect.reference_screenshot(child.get_screenshot())
