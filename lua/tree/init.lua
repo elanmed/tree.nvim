@@ -479,7 +479,7 @@ M.tree = function(opts)
       vim.schedule(function()
         recurse {
           action = "create",
-          created_path = vim.fs.joinpath(vim.fn.getcwd(), create_path),
+          created_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), create_path)),
         }
       end)
       return
@@ -508,7 +508,7 @@ M.tree = function(opts)
     vim.schedule(function()
       recurse {
         action = "create",
-        created_path = vim.fs.joinpath(vim.fn.getcwd(), create_path),
+        created_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), create_path)),
       }
     end)
     vim.cmd "doautocmd User TreeCreate"
