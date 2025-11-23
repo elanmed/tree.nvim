@@ -125,6 +125,7 @@ M.tree = function(opts)
     return dir
   end)()
   opts.tree_dir = default(opts.tree_dir, curr_dir)
+  opts.tree_dir = vim.fs.normalize(vim.fs.abspath(opts.tree_dir))
 
   opts._tree_bufnr = (function()
     if opts._tree_bufnr then
@@ -195,7 +196,7 @@ M.tree = function(opts)
       local name = entry.type == "directory" and entry.name .. "/" or entry.name
 
       local rel_path = vim.fs.normalize(name)
-      local abs_path = vim.fs.joinpath(opts.tree_dir, rel_path)
+      local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, rel_path))
       local basename = vim.fs.basename(abs_path)
 
       local icon_type = entry.type == "directory" and "directory" or "file"

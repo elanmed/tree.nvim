@@ -15,18 +15,18 @@ local T = MiniTest.new_set {
         M.tree {
           tree_dir = "./test_dir",
         }
-        vim.keymap.set("n", "<cr>", "<Plug>TreeSelect" )
-        vim.keymap.set("n", "q", "<Plug>TreeCloseTree")
-        vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel")
-        vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel")
-        vim.keymap.set("n", "h", "<Plug>TreeOutDir")
-        vim.keymap.set("n", "l", "<Plug>TreeInDir")
-        vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath")
-        vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath")
-        vim.keymap.set("n", "o", "<Plug>TreeCreate")
-        vim.keymap.set("n", "e", "<Plug>TreeRefresh")
-        vim.keymap.set("n", "r", "<Plug>TreeRename")
-        vim.keymap.set("n", "dd", "<Plug>TreeDelete")
+        vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = true })
+        vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = true })
+        vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel", { buffer = true })
+        vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel", { buffer = true })
+        vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = true })
+        vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = true })
+        vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = true })
+        vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = true })
+        vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = true })
+        vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = true })
+        vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = true })
+        vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = true })
       ]]
     end,
     post_once = child.stop,
@@ -54,7 +54,7 @@ T["tree"]["plug remaps"]["TreeDecreaseLevel"] = function()
 end
 T["tree"]["plug remaps"]["TreeInDir"] = function()
   expect.reference_screenshot(child.get_screenshot())
-  child.type_keys { "l", }
+  child.type_keys "l"
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "l"
   expect.reference_screenshot(child.get_screenshot())
@@ -79,6 +79,22 @@ T["tree"]["plug remaps"]["TreeCloseTree"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "q"
   expect.reference_screenshot(child.get_screenshot())
+end
+T["tree"]["plug remaps"]["TreeYankRelativePath"] = function()
+  child.type_keys { "y", "r", }
+  MiniTest.expect.equality(child.fn.getreg "", "test_dir/dir_a")
+
+  child.type_keys "j"
+  child.type_keys { "y", "r", }
+  MiniTest.expect.equality(child.fn.getreg "", "test_dir/dir_b")
+end
+T["tree"]["plug remaps"]["TreeYankAbsolutePath"] = function()
+  child.type_keys { "y", "a", }
+  MiniTest.expect.equality(child.fn.getreg "", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_a"))
+
+  child.type_keys "j"
+  child.type_keys { "y", "a", }
+  MiniTest.expect.equality(child.fn.getreg "", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_b"))
 end
 
 return T
