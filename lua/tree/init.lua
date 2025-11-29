@@ -348,7 +348,9 @@ M.tree = function(opts)
 
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { row, 0, })
   elseif opts._prev_action == "create" then
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { created_path_idx, 0, })
+    if created_path_idx then
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { created_path_idx, 0, })
+    end
   end
 
   --- @class RecurseOpts
