@@ -492,6 +492,15 @@ M.tree = function(opts)
       return
     end
 
+    --- @param created_path string
+    local get_created_path = function(created_path)
+      local path = created_path
+      while vim.fs.dirname(path) ~= opts.tree_dir do
+        path = vim.fs.dirname(path)
+      end
+      return path
+    end
+
     if vim.endswith(create_path, "/") then
       if fs_exists(create_path) then
         vim.notify(
@@ -510,7 +519,11 @@ M.tree = function(opts)
       vim.schedule(function()
         recurse {
           prev_action = "create",
-          created_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), create_path)),
+          created_path = get_created_path(
+            vim.fs.normalize(
+              vim.fs.joinpath(vim.fn.getcwd(), create_path)
+            )
+          ),
         }
       end)
       return
@@ -539,7 +552,11 @@ M.tree = function(opts)
     vim.schedule(function()
       recurse {
         prev_action = "create",
-        created_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), create_path)),
+        created_path = get_created_path(
+          vim.fs.normalize(
+            vim.fs.joinpath(vim.fn.getcwd(), create_path)
+          )
+        ),
       }
     end)
     vim.cmd "doautocmd User TreeCreate"
