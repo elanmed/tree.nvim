@@ -388,12 +388,9 @@ M.tree = function(opts)
     local line = lines[vim.fn.line "."]
     if line then table.insert(opts._history, line.abs_path) end
 
-    local prev_dir
-    if line then prev_dir = vim.fs.dirname(line.abs_path) end
-
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
-      prev_dir = prev_dir,
+      prev_dir = opts.tree_dir,
       level = 1,
       prev_action = "out-dir",
     }
