@@ -456,11 +456,11 @@ M.tree = function(opts)
   local create = function()
     local abs_path = (function()
       local line = lines[vim.fn.line "."]
-      if line then return line.abs_path end
+      if line then return vim.fs.dirname(line.abs_path) end
       return opts.tree_dir
     end)()
     local rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path)
-    local dirname = vim.fs.joinpath(vim.fs.dirname(rel_path), "/")
+    local dirname = vim.fs.joinpath(rel_path, "/")
 
     local create_path = vim.fn.input("Create a file or directory: ", dirname)
     if create_path == "" then
