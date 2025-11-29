@@ -454,8 +454,14 @@ M.tree = function(opts)
   end
 
   local create = function()
-    local rel_tree_dir = vim.fs.relpath(vim.fn.getcwd(), opts.tree_dir)
-    local dirname = vim.fs.joinpath(rel_tree_dir, "/")
+    local abs_path = (function()
+      local line = lines[vim.fn.line "."]
+      if line then return line.abs_path end
+      return opts.tree_dir
+    end)()
+    local rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path)
+    local dirname = vim.fs.joinpath(vim.fs.dirname(rel_path), "/")
+
     local create_path = vim.fn.input("Create a file or directory: ", dirname)
     if create_path == "" then
       vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
