@@ -468,6 +468,15 @@ M.tree = function(opts)
     vim.notify(("[tree.nvim] relative path yanked: %s"):format(line.rel_path), vim.log.levels.INFO)
   end
 
+  local yank_dir_path = function()
+    local line = lines[vim.fn.line "."]
+    if not line then return end
+    local dirname = vim.fs.dirname(line.abs_path)
+    vim.fn.setreg("", dirname)
+    vim.fn.setreg("+", dirname)
+    vim.notify(("[tree.nvim] dirname yanked: %s"):format(dirname), vim.log.levels.INFO)
+  end
+
   local refresh = function()
     recurse { _prev_action = "refresh", }
   end
@@ -700,6 +709,7 @@ M.tree = function(opts)
     InDir = in_dir,
     YankRelativePath = yank_rel_path,
     YankAbsolutePath = yank_abs_path,
+    YankDirectoryPath = yank_dir_path,
     Create = create,
     Refresh = refresh,
     Delete = delete,

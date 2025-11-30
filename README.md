@@ -90,6 +90,12 @@ Copy the relative path (from the cwd) of the file/directory under the cursor to 
 
 Copy the absolute path of the file/directory under the cursor to the unnamed register and system clipboard
 
+#### `<Plug>TreeYankDirectoryPath`
+
+Copy the directory name of the file under the cursor to the unnamed register and system clipboard
+
+- Can be used in conjuction with `<Plug>TreeCopy`
+
 #### `<Plug>TreeCreate`
 
 Create a new file or directory:

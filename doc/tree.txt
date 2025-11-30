@@ -1,4 +1,4 @@
-*tree.txt*                                       Last change: 2025 November 11
+*tree.txt*                                       Last change: 2025 November 29
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
@@ -15,6 +15,7 @@ Plug remaps ............................................... |tree-plug-remaps|
 `<Plug>TreeInDir` ..................................... |tree-<plug>treeindir|
 `<Plug>TreeYankRelativePath` ............... |tree-<plug>treeyankrelativepath|
 `<Plug>TreeYankAbsolutePath` ............... |tree-<plug>treeyankabsolutepath|
+`<Plug>TreeYankDirectoryPath` ............. |tree-<plug>treeyankdirectorypath|
 `<Plug>TreeCreate` ................................... |tree-<plug>treecreate|
 `<Plug>TreeDelete` ................................... |tree-<plug>treedelete|
 `<Plug>TreeRename` ................................... |tree-<plug>treerename|
@@ -140,6 +141,14 @@ to the unnamed register and system clipboard
 Copy the absolute path of the file/directory under the cursor to the unnamed
 register and system clipboard
 
+
+                                                                              
+`<PLUG>TREEYANKDIRECTORYPATH`               *tree-<plug>treeyankdirectorypath*
+
+Copy the directory name of the file under the cursor to the unnamed register
+and system clipboard
+
+- Can be used in conjuction with `<Plug>TreeCopy`
 
                                                                               
 `<PLUG>TREECREATE`                                     *tree-<plug>treecreate*

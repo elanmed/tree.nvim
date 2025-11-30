@@ -10,6 +10,7 @@ tree-<plug>treerefresh	tree.txt	/*tree-<plug>treerefresh*
 tree-<plug>treerename	tree.txt	/*tree-<plug>treerename*
 tree-<plug>treeselect	tree.txt	/*tree-<plug>treeselect*
 tree-<plug>treeyankabsolutepath	tree.txt	/*tree-<plug>treeyankabsolutepath*
+tree-<plug>treeyankdirectorypath	tree.txt	/*tree-<plug>treeyankdirectorypath*
 tree-<plug>treeyankrelativepath	tree.txt	/*tree-<plug>treeyankrelativepath*
 tree-api	tree.txt	/*tree-api*
 tree-example-config	tree.txt	/*tree-example-config*
