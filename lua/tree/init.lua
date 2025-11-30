@@ -358,9 +358,8 @@ M.tree = function(opts)
   --- @class RecurseOpts
   --- @field level? number
   --- @field tree_dir? string
-  --- @field created_path? string
-  --- @field prev_path? string
-  --- @field prev_action TreePrevAction
+  --- @field _created_path? string
+  --- @field _prev_action TreePrevAction
 
   --- @param r_opts RecurseOpts
   local recurse = function(r_opts)
@@ -371,8 +370,8 @@ M.tree = function(opts)
     M.tree {
       tree_dir = r_opts.tree_dir,
       level = r_opts.level,
-      _prev_action = r_opts.prev_action,
-      _created_path = r_opts.created_path,
+      _prev_action = r_opts._prev_action,
+      _created_path = r_opts._created_path,
       _prev_path = (function()
         local line = lines[vim.fn.line "."]
         if line then return line.abs_path end
@@ -393,7 +392,7 @@ M.tree = function(opts)
   local inc_level = function()
     recurse {
       level = opts.level + 1,
-      prev_action = "update-level",
+      _prev_action = "update-level",
     }
   end
 
@@ -404,7 +403,7 @@ M.tree = function(opts)
     end
     recurse {
       level = opts.level - 1,
-      prev_action = "update-level",
+      _prev_action = "update-level",
     }
   end
 
@@ -415,7 +414,7 @@ M.tree = function(opts)
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
       level = 1,
-      prev_action = "out-dir",
+      _prev_action = "out-dir",
     }
   end
 
@@ -426,7 +425,7 @@ M.tree = function(opts)
       recurse {
         tree_dir = line.abs_path,
         level = 1,
-        prev_action = "in-dir",
+        _prev_action = "in-dir",
       }
     end
   end
@@ -469,7 +468,7 @@ M.tree = function(opts)
   end
 
   local refresh = function()
-    recurse { prev_action = "refresh", }
+    recurse { _prev_action = "refresh", }
   end
 
   local create = function()
@@ -519,8 +518,8 @@ M.tree = function(opts)
 
       vim.schedule(function()
         recurse {
-          prev_action = "create",
-          created_path = get_created_path(vim.fs.normalize(vim.fs.abspath(create_path))),
+          _prev_action = "create",
+          _created_path = get_created_path(vim.fs.normalize(vim.fs.abspath(create_path))),
         }
       end)
       return
@@ -548,8 +547,8 @@ M.tree = function(opts)
 
     vim.schedule(function()
       recurse {
-        prev_action = "create",
-        created_path = get_created_path(
+        _prev_action = "create",
+        _created_path = get_created_path(
           vim.fs.normalize(
             vim.fs.abspath(create_path)
           )
@@ -588,7 +587,7 @@ M.tree = function(opts)
         end
       end
 
-      vim.schedule(function() recurse { prev_action = "refresh", } end)
+      vim.schedule(function() recurse { _prev_action = "refresh", } end)
       vim.cmd "doautocmd User TreeDelete"
     end
 
@@ -639,7 +638,7 @@ M.tree = function(opts)
       vim.notify("[tree.nvim] vim.fn.rename returned a non-zero value: " .. success, vim.log.levels.ERROR)
       return
     end
-    vim.schedule(function() recurse { prev_action = "refresh", } end)
+    vim.schedule(function() recurse { _prev_action = "refresh", } end)
     vim.cmd "doautocmd User TreeRename"
   end
 
