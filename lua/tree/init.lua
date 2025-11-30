@@ -655,14 +655,9 @@ M.tree = function(opts)
   local copy = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    local copy_path = vim.fn.input("Copy to: ", vim.fs.joinpath(vim.fs.dirname(line.abs_path), "/"))
+    local copy_path = vim.fn.input "Copy to: "
     if copy_path == "" then
       vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
-      return
-    end
-
-    if not vim.endswith(copy_path, "/") then
-      vim.notify("[tree.nvim] Can only copy to directories", vim.log.levels.ERROR)
       return
     end
 
