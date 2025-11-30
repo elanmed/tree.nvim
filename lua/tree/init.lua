@@ -477,26 +477,31 @@ M.tree = function(opts)
   local yank_abs_path = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    vim.fn.setreg("", line.abs_path)
-    vim.fn.setreg("+", line.abs_path)
+    vim.fn.setreg("a", line.abs_path)
     vim.notify(("[tree.nvim] absolute path yanked: %s"):format(line.abs_path), vim.log.levels.INFO)
   end
 
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    vim.fn.setreg("", line.rel_path)
-    vim.fn.setreg("+", line.rel_path)
+    vim.fn.setreg("r", line.rel_path)
     vim.notify(("[tree.nvim] relative path yanked: %s"):format(line.rel_path), vim.log.levels.INFO)
   end
 
-  local yank_dir_path = function()
+  local yank_dir = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
     local dirname = vim.fs.dirname(line.abs_path)
-    vim.fn.setreg("", dirname)
-    vim.fn.setreg("+", dirname)
+    vim.fn.setreg("d", dirname)
     vim.notify(("[tree.nvim] dirname yanked: %s"):format(dirname), vim.log.levels.INFO)
+  end
+
+  local yank_basename = function()
+    local line = lines[vim.fn.line "."]
+    if not line then return end
+    local basename = vim.fs.basename(line.abs_path)
+    vim.fn.setreg("b", basename)
+    vim.notify(("[tree.nvim] basename yanked: %s"):format(basename), vim.log.levels.INFO)
   end
 
   local refresh = function()
@@ -736,7 +741,8 @@ M.tree = function(opts)
     InDir = in_dir,
     YankRelativePath = yank_rel_path,
     YankAbsolutePath = yank_abs_path,
-    YankDirectoryPath = yank_dir_path,
+    YankDirectory = yank_dir,
+    YankBasename = yank_basename,
     Create = create,
     Refresh = refresh,
     Delete = delete,

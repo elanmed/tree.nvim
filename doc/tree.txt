@@ -15,7 +15,8 @@ Plug remaps ............................................... |tree-plug-remaps|
 `<Plug>TreeInDir` ..................................... |tree-<plug>treeindir|
 `<Plug>TreeYankRelativePath` ............... |tree-<plug>treeyankrelativepath|
 `<Plug>TreeYankAbsolutePath` ............... |tree-<plug>treeyankabsolutepath|
-`<Plug>TreeYankDirectoryPath` ............. |tree-<plug>treeyankdirectorypath|
+`<Plug>TreeYankDirectory` ..................... |tree-<plug>treeyankdirectory|
+`<Plug>TreeYankBasename` ....................... |tree-<plug>treeyankbasename|
 `<Plug>TreeCreate` ................................... |tree-<plug>treecreate|
 `<Plug>TreeDelete` ................................... |tree-<plug>treedelete|
 `<Plug>TreeRename` ................................... |tree-<plug>treerename|
@@ -76,6 +77,8 @@ EXAMPLE CONFIG                                           *tree-example-config*
         vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
         vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
         vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
+        vim.keymap.set("n", "yd", "<Plug>TreeYankDirectory", { buffer = args.buf, })
+        vim.keymap.set("n", "yb", "<Plug>TreeYankBasename", { buffer = args.buf, })
         vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = args.buf, })
         vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = args.buf, })
         vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
@@ -134,23 +137,29 @@ Decrease the tree depth level by 1
 `<PLUG>TREEYANKRELATIVEPATH`                 *tree-<plug>treeyankrelativepath*
 
 Copy the relative path (from the cwd) of the file/directory under the cursor
-to the unnamed register and system clipboard
+to the `r` register
 
 
                                                                               
 `<PLUG>TREEYANKABSOLUTEPATH`                 *tree-<plug>treeyankabsolutepath*
 
-Copy the absolute path of the file/directory under the cursor to the unnamed
-register and system clipboard
+Copy the absolute path of the file/directory under the cursor to the `a`
+register
 
 
                                                                               
-`<PLUG>TREEYANKDIRECTORYPATH`               *tree-<plug>treeyankdirectorypath*
+`<PLUG>TREEYANKDIRECTORY`                       *tree-<plug>treeyankdirectory*
 
-Copy the directory name of the file under the cursor to the unnamed register
-and system clipboard
+Copy the directory name of the file under the cursor to the `d` register
 
 - Can be used in conjuction with `<Plug>TreeCopy`
+
+                                                                              
+`<PLUG>TREEYANKBASENAME`                         *tree-<plug>treeyankbasename*
+
+Copy the basename name of the file under the cursor to the `b` register
+
+- Can be used in conjuction with `<Plug>TreeCreate`
 
                                                                               
 `<PLUG>TREECREATE`                                     *tree-<plug>treecreate*

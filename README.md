@@ -43,6 +43,8 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
     vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
     vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
+    vim.keymap.set("n", "yd", "<Plug>TreeYankDirectory", { buffer = args.buf, })
+    vim.keymap.set("n", "yb", "<Plug>TreeYankBasename", { buffer = args.buf, })
     vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = args.buf, })
     vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = args.buf, })
     vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
@@ -86,17 +88,23 @@ Decrease the tree depth level by 1
 
 #### `<Plug>TreeYankRelativePath`
 
-Copy the relative path (from the cwd) of the file/directory under the cursor to the unnamed register and system clipboard
+Copy the relative path (from the cwd) of the file/directory under the cursor to the `r` register
 
 #### `<Plug>TreeYankAbsolutePath`
 
-Copy the absolute path of the file/directory under the cursor to the unnamed register and system clipboard
+Copy the absolute path of the file/directory under the cursor to the `a` register
 
-#### `<Plug>TreeYankDirectoryPath`
+#### `<Plug>TreeYankDirectory`
 
-Copy the directory name of the file under the cursor to the unnamed register and system clipboard
+Copy the directory name of the file under the cursor to the `d` register
 
 - Can be used in conjuction with `<Plug>TreeCopy`
+
+#### `<Plug>TreeYankBasename`
+
+Copy the basename name of the file under the cursor to the `b` register
+
+- Can be used in conjuction with `<Plug>TreeCreate`
 
 #### `<Plug>TreeCreate`
 
