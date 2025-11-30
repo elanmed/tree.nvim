@@ -460,8 +460,7 @@ M.tree = function(opts)
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    local cwd = vim.fn.getcwd()
-    local rel_path = vim.fs.relpath(cwd, line.abs_path)
+    local rel_path = vim.fs.relpath(vim.fn.getcwd(), line.abs_path)
     vim.fn.setreg("", rel_path)
     vim.fn.setreg("+", rel_path)
     vim.notify(("[tree.nvim] relative path yanked: %s"):format(rel_path), vim.log.levels.INFO)
@@ -519,11 +518,7 @@ M.tree = function(opts)
       vim.schedule(function()
         recurse {
           prev_action = "create",
-          created_path = get_created_path(
-            vim.fs.normalize(
-              vim.fs.joinpath(vim.fn.getcwd(), create_path)
-            )
-          ),
+          created_path = get_created_path(vim.fs.normalize(vim.fs.abspath(create_path))),
         }
       end)
       return
@@ -554,7 +549,7 @@ M.tree = function(opts)
         prev_action = "create",
         created_path = get_created_path(
           vim.fs.normalize(
-            vim.fs.joinpath(vim.fn.getcwd(), create_path)
+            vim.fs.abspath(create_path)
           )
         ),
       }
