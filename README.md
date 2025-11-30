@@ -51,6 +51,8 @@ vim.api.nvim_create_autocmd("FileType", {
 
     -- delete multiple items
     vim.keymap.set("v", "d", "<Plug>TreeDelete", { buffer = args.buf, })
+    -- copy multiple items
+    vim.keymap.set("v", "yy", "<Plug>TreeCopy", { buffer = args.buf, })
   end,
 })
 ```
@@ -122,7 +124,7 @@ Rename the file or directory under the cursor:
 
 #### `<Plug>TreeCopy`
 
-Copy the file or directory under the cursor to a destination:
+Copy the file or directory under the cursor or visual selection to a destination:
 
 - Trigger the `User TreeCopy` autocommand after copying
 - Refresh the tree (`TreeRefresh`)

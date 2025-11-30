@@ -55,6 +55,28 @@ local set_opts = function(winnr, opts)
   end
 end
 
+--- @param lines Line['']
+--- @return Line[]
+local get_visual_or_current_lines = function(lines)
+  --- @type string
+  local curr_mode = vim.fn.mode()
+  if curr_mode == "v" or curr_mode == "V" then
+    local start_line = vim.fn.line "."
+    local end_line = vim.fn.line "v"
+    if start_line > end_line then
+      start_line = vim.fn.line "v"
+      end_line = vim.fn.line "."
+    end
+
+    if not lines[start_line] or not lines[end_line] then return {} end
+    return vim.list_slice(lines, start_line, end_line)
+  else
+    local line = lines[vim.fn.line "."]
+    if not line then return {} end
+    return { line, }
+  end
+end
+
 --- @class Line
 --- @field whitespace string
 --- @field abs_path string
@@ -599,25 +621,15 @@ M.tree = function(opts)
 
       vim.schedule(function() recurse { _prev_action = "refresh", } end)
       vim.cmd "doautocmd User TreeDelete"
+      vim.api.nvim_feedkeys(
+        vim.api.nvim_replace_termcodes("<Esc>", true, false, true),
+        "n",
+        false
+      )
     end
 
-    --- @type string
-    local curr_mode = vim.fn.mode()
-    if curr_mode == "v" or curr_mode == "V" then
-      local start_line = vim.fn.line "."
-      local end_line = vim.fn.line "v"
-      if start_line > end_line then
-        start_line = vim.fn.line "v"
-        end_line = vim.fn.line "."
-      end
-
-      if not lines[start_line] or not lines[end_line] then return end
-      delete_lines(vim.list_slice(lines, start_line, end_line))
-    else
-      local line = lines[vim.fn.line "."]
-      if not line then return end
-      delete_lines { line, }
-    end
+    local visual_or_current_lines = get_visual_or_current_lines(lines)
+    delete_lines(visual_or_current_lines)
   end
 
   local rename = function()
@@ -629,7 +641,7 @@ M.tree = function(opts)
       return
     end
 
-    local option = vim.fn.confirm(("Rename %s -> %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
+    local option = vim.fn.confirm(("From: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
     if option ~= 1 then
       vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
       return
@@ -653,46 +665,66 @@ M.tree = function(opts)
   end
 
   local copy = function()
-    local line = lines[vim.fn.line "."]
-    if not line then return end
     local copy_path = vim.fn.input "Copy to: "
     if copy_path == "" then
       vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
       return
     end
 
-    local option = vim.fn.confirm(("Copy %s -> %s"):format(line.abs_path, copy_path), "&Yes\n&No", 2)
-    if option ~= 1 then
-      vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
-      return
-    end
+    --- @param lines_arg Line[]
+    local copy_lines = function(lines_arg)
+      local abs_path_tbl = {}
+      for _, line in ipairs(lines_arg) do
+        table.insert(abs_path_tbl, line.abs_path)
+      end
+      local abs_path_str = table.concat(abs_path_tbl, "\n")
 
-    local copied_path = vim.fs.normalize(
-      vim.fs.joinpath(copy_path, vim.fs.basename(line.abs_path))
-    )
+      local option = vim.fn.confirm(("Copy %s\n To: %s"):format(abs_path_str, copy_path), "&Yes\n&No", 2)
+      if option ~= 1 then
+        vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
+        return
+      end
 
-    if fs_exists(copied_path) then
-      vim.notify(
-        ("[tree.nvim] A file/directory %s already exists at path %s"):format(vim.fs.basename(line.abs_path), copy_path),
-        vim.log.levels.ERROR
+      for _, line in ipairs(lines_arg) do
+        local copied_path = vim.fs.normalize(
+          vim.fs.joinpath(copy_path, vim.fs.basename(line.abs_path))
+        )
+
+        if fs_exists(copied_path) then
+          vim.notify(
+            ("[tree.nvim] A file/directory %s already exists at path %s"):format(vim.fs.basename(line.abs_path),
+              copy_path),
+            vim.log.levels.ERROR
+          )
+          return
+        end
+      end
+
+      local mkdir_success = vim.fn.mkdir(copy_path, "p")
+      if mkdir_success == vimscript_false then
+        vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
+        return
+      end
+
+      for _, line in ipairs(lines_arg) do
+        local obj_cp = vim.system { "cp", "-r", line.abs_path, copy_path, }:wait()
+        if obj_cp.code ~= 0 then
+          vim.notify(("[tree.nvim] `cp -r` exit code was %d"):format(obj_cp.code), vim.log.levels.ERROR)
+          return
+        end
+      end
+
+      vim.schedule(function() recurse { _prev_action = "refresh", } end)
+      vim.cmd "doautocmd User TreeCopy"
+      vim.api.nvim_feedkeys(
+        vim.api.nvim_replace_termcodes("<Esc>", true, false, true),
+        "n",
+        false
       )
-      return
     end
 
-    local mkdir_success = vim.fn.mkdir(copy_path, "p")
-    if mkdir_success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
-      return
-    end
-
-    local obj_cp = vim.system({ "cp", "-r", line.abs_path, copy_path, }, { cwd = opts.tree_dir, }):wait()
-    if obj_cp.code ~= 0 then
-      vim.notify(("[tree.nvim] `cp -r` exit code was %d"):format(obj_cp.code), vim.log.levels.ERROR)
-      return
-    end
-
-    vim.schedule(function() recurse { _prev_action = "refresh", } end)
-    vim.cmd "doautocmd User TreeCopy"
+    local visual_or_current_lines = get_visual_or_current_lines(lines)
+    copy_lines(visual_or_current_lines)
   end
 
   local keymap_fns = {
@@ -722,6 +754,11 @@ M.tree = function(opts)
   vim.keymap.set("v", "<Plug>TreeDelete", keymap_fns["Delete"], {
     buffer = opts._tree_bufnr,
     desc = "Tree: Delete",
+  })
+
+  vim.keymap.set("v", "<Plug>TreeCopy", keymap_fns["Copy"], {
+    buffer = opts._tree_bufnr,
+    desc = "Tree: Copy",
   })
 end
 
