@@ -350,6 +350,8 @@ M.tree = function(opts)
   elseif opts._prev_action == "create" then
     if created_path_idx then
       vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { created_path_idx, 0, })
+    else
+      vim.notify("[tree.nvim] Expected to find the created path when setting the cursor", vim.log.levels.ERROR)
     end
   end
 
