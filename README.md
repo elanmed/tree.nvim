@@ -102,7 +102,7 @@ Copy the directory name of the file under the cursor to the `d` register
 
 #### `<Plug>TreeYankBasename`
 
-Copy the basename name of the file under the cursor to the `b` register
+Copy the basename (minus the extension) of the file under the cursor to the `b` register
 
 - Can be used in conjuction with `<Plug>TreeCreate`
 

@@ -107,12 +107,18 @@ T["tree"]["plug remaps"]["TreeYankAbsolute"] = function()
   MiniTest.expect.equality(child.fn.getreg "d", vim.fs.joinpath(child.fn.getcwd(), "test_dir"))
 end
 T["tree"]["plug remaps"]["TreeYankBasename"] = function()
+  child.type_keys { "l", }
+
   child.type_keys { "y", "b", }
-  MiniTest.expect.equality(child.fn.getreg "b", "dir_a")
+  MiniTest.expect.equality(child.fn.getreg "b", "dir_c")
 
   child.type_keys "j"
   child.type_keys { "y", "b", }
-  MiniTest.expect.equality(child.fn.getreg "b", "dir_b")
+  MiniTest.expect.equality(child.fn.getreg "b", "init")
+
+  child.type_keys "j"
+  child.type_keys { "y", "b", }
+  MiniTest.expect.equality(child.fn.getreg "b", "mod")
 end
 
 return T

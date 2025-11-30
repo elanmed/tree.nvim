@@ -499,7 +499,13 @@ M.tree = function(opts)
   local yank_basename = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    local basename = vim.fs.basename(line.abs_path)
+    local basename = (function()
+      local basename_with_ext = vim.fs.basename(line.abs_path)
+      local ext_idx = basename_with_ext:find "%."
+      if ext_idx == nil then return basename_with_ext end
+      return basename_with_ext:sub(1, ext_idx - 1)
+    end)()
+
     vim.fn.setreg("b", basename)
     vim.notify(("[tree.nvim] basename yanked: %s"):format(basename), vim.log.levels.INFO)
   end
