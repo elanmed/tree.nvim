@@ -1,4 +1,5 @@
 tree-<plug>treeclosetree	tree.txt	/*tree-<plug>treeclosetree*
+tree-<plug>treecopy	tree.txt	/*tree-<plug>treecopy*
 tree-<plug>treecreate	tree.txt	/*tree-<plug>treecreate*
 tree-<plug>treedecreaselevel	tree.txt	/*tree-<plug>treedecreaselevel*
 tree-<plug>treedelete	tree.txt	/*tree-<plug>treedelete*

@@ -58,6 +58,7 @@ end
 --- @class Line
 --- @field whitespace string
 --- @field abs_path string
+--- @field rel_path string
 --- @field formatted string
 --- @field icon_char string
 --- @field icon_hl string
@@ -211,6 +212,7 @@ M.tree = function(opts)
       --- @type Line
       local line = {
         abs_path = abs_path,
+        rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path),
         whitespace = whitespace,
         formatted = formatted,
         icon_char = icon_info.icon_char,
@@ -461,10 +463,9 @@ M.tree = function(opts)
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    local rel_path = vim.fs.relpath(vim.fn.getcwd(), line.abs_path)
-    vim.fn.setreg("", rel_path)
-    vim.fn.setreg("+", rel_path)
-    vim.notify(("[tree.nvim] relative path yanked: %s"):format(rel_path), vim.log.levels.INFO)
+    vim.fn.setreg("", line.rel_path)
+    vim.fn.setreg("+", line.rel_path)
+    vim.notify(("[tree.nvim] relative path yanked: %s"):format(line.rel_path), vim.log.levels.INFO)
   end
 
   local refresh = function()
@@ -642,6 +643,54 @@ M.tree = function(opts)
     vim.cmd "doautocmd User TreeRename"
   end
 
+  local copy = function()
+    local line = lines[vim.fn.line "."]
+    if not line then return end
+    local copy_path = vim.fn.input("Copy to: ", vim.fs.joinpath(vim.fs.dirname(line.abs_path), "/"))
+    if copy_path == "" then
+      vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
+      return
+    end
+
+    if not vim.endswith(copy_path, "/") then
+      vim.notify("[tree.nvim] Can only copy to directories", vim.log.levels.ERROR)
+      return
+    end
+
+    local option = vim.fn.confirm(("Copy %s -> %s"):format(line.abs_path, copy_path), "&Yes\n&No", 2)
+    if option ~= 1 then
+      vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
+      return
+    end
+
+    local copied_path = vim.fs.normalize(
+      vim.fs.joinpath(copy_path, vim.fs.basename(line.abs_path))
+    )
+
+    if fs_exists(copied_path) then
+      vim.notify(
+        ("[tree.nvim] A file/directory %s already exists at path %s"):format(vim.fs.basename(line.abs_path), copy_path),
+        vim.log.levels.ERROR
+      )
+      return
+    end
+
+    local mkdir_success = vim.fn.mkdir(copy_path, "p")
+    if mkdir_success == vimscript_false then
+      vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
+      return
+    end
+
+    local obj_cp = vim.system({ "cp", "-r", line.abs_path, copy_path, }, { cwd = opts.tree_dir, }):wait()
+    if obj_cp.code ~= 0 then
+      vim.notify(("[tree.nvim] `cp -r` exit code was %d"):format(obj_cp.code), vim.log.levels.ERROR)
+      return
+    end
+
+    vim.schedule(function() recurse { _prev_action = "refresh", } end)
+    vim.cmd "doautocmd User TreeCopy"
+  end
+
   local keymap_fns = {
     CloseTree = close_tree,
     Select = select,
@@ -655,6 +704,7 @@ M.tree = function(opts)
     Refresh = refresh,
     Delete = delete,
     Rename = rename,
+    Copy = copy,
   }
 
   for fn_name, fn in pairs(keymap_fns) do

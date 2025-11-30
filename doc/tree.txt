@@ -18,6 +18,7 @@ Plug remaps ............................................... |tree-plug-remaps|
 `<Plug>TreeCreate` ................................... |tree-<plug>treecreate|
 `<Plug>TreeDelete` ................................... |tree-<plug>treedelete|
 `<Plug>TreeRename` ................................... |tree-<plug>treerename|
+`<Plug>TreeCopy` ....................................... |tree-<plug>treecopy|
 `<Plug>TreeRefresh` ................................. |tree-<plug>treerefresh|
 
 ==============================================================================
@@ -78,6 +79,7 @@ EXAMPLE CONFIG                                           *tree-example-config*
         vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = args.buf, })
         vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
         vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = args.buf, })
+        vim.keymap.set("n", "yy", "<Plug>TreeCopy", { buffer = args.buf, })
     
         -- delete multiple items
         vim.keymap.set("v", "d", "<Plug>TreeDelete", { buffer = args.buf, })
@@ -163,7 +165,15 @@ Delete the file or directory under the cursor or visual selection:
 
 Rename the file or directory under the cursor:
 
-- Trigger the `User TreeRename` autocommand after rename
+- Trigger the `User TreeRename` autocommand after renaming
+- Refresh the tree (`TreeRefresh`)
+
+                                                                              
+`<PLUG>TREECOPY`                                         *tree-<plug>treecopy*
+
+Copy the file or directory under the cursor to a destination:
+
+- Trigger the `User TreeCopy` autocommand after copying
 - Refresh the tree (`TreeRefresh`)
 
                                                                               
