@@ -523,12 +523,12 @@ M.tree = function(opts)
     local rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path)
     local dirname = vim.fs.joinpath(rel_path, "/")
 
-    local raw_create_path = vim.fn.input("Create relative to the cwd: ", dirname)
+    local raw_create_path = vim.fn.input("Create (relative to the cwd): ", dirname)
     if raw_create_path == "" then
       vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
       return
     end
-    local create_path = vim.fs.abspath(vim.fs.normalize(raw_create_path))
+    local create_path = vim.fs.normalize(vim.fs.abspath(raw_create_path))
 
     local option = vim.fn.confirm(("Create? %s"):format(create_path), "&Yes\n&No", 2)
     if option ~= 1 then
@@ -643,11 +643,12 @@ M.tree = function(opts)
   local rename = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    local rename_path = vim.fn.input("Rename to: ", line.abs_path)
-    if rename_path == "" then
+    local raw_rename_path = vim.fn.input("Rename to (relative to the cwd): ", line.rel_path)
+    if raw_rename_path == "" then
       vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
       return
     end
+    local rename_path = vim.fs.normalize(vim.fs.abspath(raw_rename_path))
 
     local option = vim.fn.confirm(("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
     if option ~= 1 then
@@ -673,11 +674,12 @@ M.tree = function(opts)
   end
 
   local copy = function()
-    local copy_path = vim.fn.input "Copy to: "
-    if copy_path == "" then
+    local raw_copy_path = vim.fn.input "Copy to (relative to the cwd): "
+    if raw_copy_path == "" then
       vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
       return
     end
+    local abs_copy_path = vim.fs.normalize(vim.fs.abspath(raw_copy_path))
 
     --- @param lines_arg Line[]
     local copy_lines = function(lines_arg)
@@ -687,35 +689,35 @@ M.tree = function(opts)
       end
       local abs_path_str = table.concat(abs_path_tbl, "\n")
 
-      local option = vim.fn.confirm(("Copy\nFrom:\n%s\nTo:\n%s"):format(abs_path_str, copy_path), "&Yes\n&No", 2)
+      local option = vim.fn.confirm(("Copy\nFrom:\n%s\nTo:\n%s"):format(abs_path_str, abs_copy_path), "&Yes\n&No", 2)
       if option ~= 1 then
         vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
         return
       end
 
       for _, line in ipairs(lines_arg) do
-        local copied_path = vim.fs.normalize(
-          vim.fs.joinpath(copy_path, vim.fs.basename(line.abs_path))
+        local copy_file_path = vim.fs.normalize(
+          vim.fs.joinpath(abs_copy_path, vim.fs.basename(line.abs_path))
         )
 
-        if fs_exists(copied_path) then
+        if fs_exists(copy_file_path) then
           vim.notify(
-            ("[tree.nvim] A file/directory %s already exists at path %s"):format(vim.fs.basename(line.abs_path),
-              copy_path),
+            ("[tree.nvim] A file %s already exists at path %s"):format(vim.fs.basename(line.abs_path),
+              abs_copy_path),
             vim.log.levels.ERROR
           )
           return
         end
       end
 
-      local mkdir_success = vim.fn.mkdir(copy_path, "p")
+      local mkdir_success = vim.fn.mkdir(abs_copy_path, "p")
       if mkdir_success == vimscript_false then
         vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
         return
       end
 
       for _, line in ipairs(lines_arg) do
-        local obj_cp = vim.system { "cp", "-r", line.abs_path, copy_path, }:wait()
+        local obj_cp = vim.system { "cp", "-r", line.abs_path, abs_copy_path, }:wait()
         if obj_cp.code ~= 0 then
           vim.notify(("[tree.nvim] `cp -r` exit code was %d"):format(obj_cp.code), vim.log.levels.ERROR)
           return
