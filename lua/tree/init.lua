@@ -6,6 +6,14 @@ local vimscript_false = 0
 local ns_id = vim.api.nvim_create_namespace "Tree"
 vim.g.tree_winnr = -1
 
+--- @param level vim.log.levels
+--- @param msg string
+--- @param ... any
+local notify = function(level, msg, ...)
+  msg = "[tree.nvim]: " .. msg
+  vim.notify(msg:format(...), level)
+end
+
 --- @generic T
 --- @param val T | nil
 --- @param default_val T
@@ -346,13 +354,13 @@ M.tree = function(opts)
     if prev_dir_idx then
       vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_idx, 0, })
     else
-      vim.notify("[tree.nvim] Expected to find the prev dir when setting the cursor", vim.log.levels.ERROR)
+      notify(vim.log.levels.ERROR, "Expected to find the prev dir when setting the cursor")
     end
   elseif opts._prev_action == "update-level" then
     if prev_path_idx then
       vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_path_idx, 0, })
     else
-      vim.notify("[tree.nvim] Expected to find the prev path when setting the cursor", vim.log.levels.ERROR)
+      notify(vim.log.levels.ERROR, "Expected to find the prev path when setting the cursor")
     end
   elseif opts._prev_action == "refresh" then
     local row = (function()
@@ -375,7 +383,7 @@ M.tree = function(opts)
     if created_path_idx then
       vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { created_path_idx, 0, })
     else
-      vim.notify("[tree.nvim] Expected to find the created path when setting the cursor", vim.log.levels.ERROR)
+      notify(vim.log.levels.ERROR, "Expected to find the created path when setting the cursor")
     end
   end
 
@@ -422,7 +430,7 @@ M.tree = function(opts)
 
   local dec_level = function()
     if opts.level == 1 then
-      vim.notify("[tree.nvim] level must be greater than 0", vim.log.levels.INFO)
+      notify(vim.log.levels.INFO, "level must be greater than 0")
       return
     end
     recurse {
@@ -478,14 +486,14 @@ M.tree = function(opts)
     local line = lines[vim.fn.line "."]
     if not line then return end
     vim.fn.setreg("a", line.abs_path)
-    vim.notify(("[tree.nvim] absolute path yanked: %s"):format(line.abs_path), vim.log.levels.INFO)
+    notify(vim.log.levels.INFO, "absolute path yanked: %s", line.abs_path)
   end
 
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
     vim.fn.setreg("r", line.rel_path)
-    vim.notify(("[tree.nvim] relative path yanked: %s"):format(line.rel_path), vim.log.levels.INFO)
+    notify(vim.log.levels.INFO, "relative path yanked: %s", line.rel_path)
   end
 
   local yank_dir = function()
@@ -493,7 +501,7 @@ M.tree = function(opts)
     if not line then return end
     local dirname = vim.fs.dirname(line.abs_path)
     vim.fn.setreg("d", dirname)
-    vim.notify(("[tree.nvim] dirname yanked: %s"):format(dirname), vim.log.levels.INFO)
+    notify(vim.log.levels.INFO, "dirname yanked: %s", dirname)
   end
 
   local yank_basename = function()
@@ -507,7 +515,7 @@ M.tree = function(opts)
     end)()
 
     vim.fn.setreg("b", basename)
-    vim.notify(("[tree.nvim] basename yanked: %s"):format(basename), vim.log.levels.INFO)
+    notify(vim.log.levels.INFO, "basename yanked: %s", basename)
   end
 
   local refresh = function()
@@ -525,14 +533,14 @@ M.tree = function(opts)
 
     local raw_create_path = vim.fn.input("Create: ", dirname)
     if raw_create_path == "" then
-      vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
+      notify(vim.log.levels.INFO, "Aborting create")
       return
     end
     local create_path = vim.fs.normalize(vim.fs.abspath(raw_create_path))
 
     local option = vim.fn.confirm(("Create? %s"):format(create_path), "&Yes\n&No", 2)
     if option ~= 1 then
-      vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
+      notify(vim.log.levels.INFO, "Aborting create")
       return
     end
 
@@ -547,16 +555,13 @@ M.tree = function(opts)
 
     if vim.endswith(raw_create_path, "/") then
       if fs_exists(create_path) then
-        vim.notify(
-          ("[tree.nvim] Cannot create a directory that already exists: %s"):format(create_path),
-          vim.log.levels.ERROR
-        )
+        notify(vim.log.levels.ERROR, "Cannot create a directory that already exists: %s", create_path)
         return
       end
 
       local mkdir_success = vim.fn.mkdir(create_path, "p")
       if mkdir_success == vimscript_false then
-        vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
+        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", create_path)
         return
       end
 
@@ -570,22 +575,19 @@ M.tree = function(opts)
     end
 
     if fs_exists(create_path) then
-      vim.notify(
-        ("[tree.nvim] Cannot create a file that already exists: %s"):format(create_path),
-        vim.log.levels.ERROR
-      )
+      notify(vim.log.levels.ERROR, "Cannot create a file that already exists: %s", create_path)
       return
     end
 
     local mkdir_success = vim.fn.mkdir(vim.fs.dirname(create_path), "p")
     if mkdir_success == vimscript_false then
-      vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
+      notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s) returned 0", vim.fs.dirname(create_path))
       return
     end
 
     local writefile_success = vim.fn.writefile({}, create_path)
     if writefile_success == -1 then
-      vim.notify("[tree.nvim] vim.fn.writefile returned -1", vim.log.levels.ERROR)
+      notify(vim.log.levels.ERROR "vim.fn.writefile({}, %s) returned -1", create_path)
       return
     end
 
@@ -613,17 +615,14 @@ M.tree = function(opts)
 
       local option = vim.fn.confirm(("Delete?\n%s"):format(abs_path_str), "&Yes\n&No", 2)
       if option ~= 1 then
-        vim.notify("[tree.nvim] Aborting delete", vim.log.levels.INFO)
+        notify(vim.log.levels.INFO, "Aborting delete")
         return
       end
 
       for _, line in ipairs(lines_arg) do
         local success = vim.fn.delete(line.abs_path, "rf")
         if success == -1 then
-          vim.notify(
-            ("[tree.nvim] vim.fn.delete %s returned -1"):format(line.abs_path),
-            vim.log.levels.ERROR
-          )
+          notify(vim.log.levels.ERROR, "vim.fn.delete(%s, rf) returned -1", line.abs_path)
         end
       end
 
@@ -645,28 +644,25 @@ M.tree = function(opts)
     if not line then return end
     local raw_rename_path = vim.fn.input("Rename to: ", line.rel_path)
     if raw_rename_path == "" then
-      vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
+      notify(vim.log.levels.INFO, "Aborting rename")
       return
     end
     local rename_path = vim.fs.normalize(vim.fs.abspath(raw_rename_path))
 
     local option = vim.fn.confirm(("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
     if option ~= 1 then
-      vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
+      notify(vim.log.levels.INFO, "Aborting rename")
       return
     end
 
     if fs_exists(rename_path) then
-      vim.notify(
-        ("[tree.nvim] Rename path already exists: %s"):format(rename_path),
-        vim.log.levels.ERROR
-      )
+      notify(vim.log.levels.ERROR, "Rename path already exists: %s", rename_path)
       return
     end
 
     local success = vim.fn.rename(line.abs_path, rename_path)
     if success ~= 0 then
-      vim.notify("[tree.nvim] vim.fn.rename returned a non-zero value: " .. success, vim.log.levels.ERROR)
+      notify(vim.log.levels.ERROR, "vim.fn.rename(%s, %s) returned %d", line.abs_path, rename_path, success)
       return
     end
     vim.schedule(function() recurse { _prev_action = "refresh", } end)
@@ -676,7 +672,7 @@ M.tree = function(opts)
   local copy = function()
     local raw_copy_path = vim.fn.input "Copy to a directory: "
     if raw_copy_path == "" then
-      vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
+      notify(vim.log.levels.INFO, "Aborting copy")
       return
     end
     local copy_path = vim.fs.normalize(vim.fs.abspath(raw_copy_path))
@@ -691,7 +687,7 @@ M.tree = function(opts)
 
       local option = vim.fn.confirm(("Copy\nFrom:\n%s\nTo:\n%s"):format(abs_path_str, copy_path), "&Yes\n&No", 2)
       if option ~= 1 then
-        vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
+        notify(vim.log.levels.INFO, "Aborting copy")
         return
       end
 
@@ -704,25 +700,21 @@ M.tree = function(opts)
         )
 
         if fs_exists(copy_file_path) then
-          vim.notify(
-            ("[tree.nvim] A file %s already exists at path %s"):format(vim.fs.basename(line.abs_path),
-              copy_path),
-            vim.log.levels.ERROR
-          )
+          notify(vim.log.levels.ERROR, "A file %s already exists at path %s", vim.fs.basename(line.abs_path), copy_path)
           return
         end
       end
 
       local mkdir_success = vim.fn.mkdir(copy_path, "p")
       if mkdir_success == vimscript_false then
-        vim.notify("[tree.nvim] vim.fn.mkdir returned 0", vim.log.levels.ERROR)
+        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", copy_path)
         return
       end
 
       for _, line in ipairs(lines_arg) do
         local obj_cp = vim.system { "cp", "-r", line.abs_path, copy_path, }:wait()
         if obj_cp.code ~= 0 then
-          vim.notify(("[tree.nvim] `cp -r` exit code was %d"):format(obj_cp.code), vim.log.levels.ERROR)
+          notify(vim.log.levels.ERROR, "`cp -r` exit code was %d", obj_cp.code)
           return
         end
       end
