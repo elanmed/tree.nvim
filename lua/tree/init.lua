@@ -614,7 +614,7 @@ M.tree = function(opts)
       end
       local abs_path_str = table.concat(abs_path_tbl, "\n")
 
-      local option = vim.fn.confirm(("Delete? \n%s"):format(abs_path_str), "&Yes\n&No", 2)
+      local option = vim.fn.confirm(("Delete?\n%s"):format(abs_path_str), "&Yes\n&No", 2)
       if option ~= 1 then
         vim.notify("[tree.nvim] Aborting delete", vim.log.levels.INFO)
         return
@@ -652,7 +652,7 @@ M.tree = function(opts)
       return
     end
 
-    local option = vim.fn.confirm(("From: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
+    local option = vim.fn.confirm(("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
     if option ~= 1 then
       vim.notify("[tree.nvim] Aborting rename", vim.log.levels.INFO)
       return
@@ -690,7 +690,7 @@ M.tree = function(opts)
       end
       local abs_path_str = table.concat(abs_path_tbl, "\n")
 
-      local option = vim.fn.confirm(("Copy %s\n To: %s"):format(abs_path_str, copy_path), "&Yes\n&No", 2)
+      local option = vim.fn.confirm(("Copy\nFrom:\n%s\nTo:\n%s"):format(abs_path_str, copy_path), "&Yes\n&No", 2)
       if option ~= 1 then
         vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
         return
