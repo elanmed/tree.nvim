@@ -523,13 +523,14 @@ M.tree = function(opts)
     local rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path)
     local dirname = vim.fs.joinpath(rel_path, "/")
 
-    local create_path = vim.fn.input("Create a file or directory: ", dirname)
-    if create_path == "" then
+    local raw_create_path = vim.fn.input("Create relative to the cwd: ", dirname)
+    if raw_create_path == "" then
       vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
       return
     end
+    local create_path = vim.fs.abspath(vim.fs.normalize(raw_create_path))
 
-    local option = vim.fn.confirm(("Create %s?"):format(create_path), "&Yes\n&No", 2)
+    local option = vim.fn.confirm(("Create? %s"):format(create_path), "&Yes\n&No", 2)
     if option ~= 1 then
       vim.notify("[tree.nvim] Aborting create", vim.log.levels.INFO)
       return
@@ -544,7 +545,7 @@ M.tree = function(opts)
       return path
     end
 
-    if vim.endswith(create_path, "/") then
+    if vim.endswith(raw_create_path, "/") then
       if fs_exists(create_path) then
         vim.notify(
           ("[tree.nvim] Cannot create a directory that already exists: %s"):format(create_path),
@@ -562,7 +563,7 @@ M.tree = function(opts)
       vim.schedule(function()
         recurse {
           _prev_action = "create",
-          _created_path = get_created_path(vim.fs.normalize(vim.fs.abspath(create_path))),
+          _created_path = get_created_path(create_path),
         }
       end)
       return
@@ -591,11 +592,7 @@ M.tree = function(opts)
     vim.schedule(function()
       recurse {
         _prev_action = "create",
-        _created_path = get_created_path(
-          vim.fs.normalize(
-            vim.fs.abspath(create_path)
-          )
-        ),
+        _created_path = get_created_path(create_path),
       }
     end)
     vim.cmd "doautocmd User TreeCreate"
