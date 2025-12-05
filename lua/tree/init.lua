@@ -674,7 +674,7 @@ M.tree = function(opts)
   end
 
   local copy = function()
-    local raw_copy_path = vim.fn.input "Copy to: "
+    local raw_copy_path = vim.fn.input "Copy to a directory: "
     if raw_copy_path == "" then
       vim.notify("[tree.nvim] Aborting copy", vim.log.levels.INFO)
       return
@@ -697,7 +697,10 @@ M.tree = function(opts)
 
       for _, line in ipairs(lines_arg) do
         local copy_file_path = vim.fs.normalize(
-          vim.fs.joinpath(copy_path, vim.fs.basename(line.abs_path))
+          vim.fs.joinpath(
+            copy_path,
+            vim.fs.relpath(opts.tree_dir, line.abs_path)
+          )
         )
 
         if fs_exists(copy_file_path) then
