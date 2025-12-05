@@ -691,6 +691,12 @@ M.tree = function(opts)
         return
       end
 
+      local mkdir_success = vim.fn.mkdir(copy_path, "p")
+      if mkdir_success == vimscript_false then
+        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", copy_path)
+        return
+      end
+
       for _, line in ipairs(lines_arg) do
         local copy_file_path = vim.fs.normalize(
           vim.fs.joinpath(
@@ -700,23 +706,22 @@ M.tree = function(opts)
         )
 
         if fs_exists(copy_file_path) then
-          notify(vim.log.levels.ERROR, "A file %s already exists at path %s", vim.fs.basename(line.abs_path), copy_path)
-          return
+          notify(
+            vim.log.levels.ERROR,
+            "A file %s already exists at path %s, skipping",
+            vim.fs.basename(line.abs_path),
+            copy_path
+          )
+          goto continue
         end
-      end
 
-      local mkdir_success = vim.fn.mkdir(copy_path, "p")
-      if mkdir_success == vimscript_false then
-        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", copy_path)
-        return
-      end
-
-      for _, line in ipairs(lines_arg) do
         local obj_cp = vim.system { "cp", "-r", line.abs_path, copy_path, }:wait()
         if obj_cp.code ~= 0 then
           notify(vim.log.levels.ERROR, "`cp -r` exit code was %d", obj_cp.code)
-          return
+          goto continue
         end
+
+        ::continue::
       end
 
       vim.schedule(function() recurse { _prev_action = "refresh", } end)
