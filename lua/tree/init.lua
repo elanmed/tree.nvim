@@ -669,10 +669,13 @@ M.tree = function(opts)
     vim.cmd "doautocmd User TreeRename"
   end
 
-  local copy = function()
-    local raw_copy_path = vim.fn.input "Copy to a directory: "
+  --- @param should_delete boolean
+  local copy_and_maybe_delete = function(should_delete)
+    local display_name = should_delete and "Move" or "Copy"
+    local raw_copy_path = vim.fn.input(("%s to a directory: "):format(display_name))
+
     if raw_copy_path == "" then
-      notify(vim.log.levels.INFO, "Aborting copy")
+      notify(vim.log.levels.INFO, "Aborting %s", display_name:lower())
       return
     end
     local copy_path = vim.fs.normalize(vim.fs.abspath(raw_copy_path))
@@ -685,9 +688,13 @@ M.tree = function(opts)
       end
       local abs_path_str = table.concat(abs_path_tbl, "\n")
 
-      local option = vim.fn.confirm(("Copy\nFrom:\n%s\nTo:\n%s"):format(abs_path_str, copy_path), "&Yes\n&No", 2)
+      local option = vim.fn.confirm(
+        ("%s\nFiles:\n%s\nTo:\n%s"):format(display_name, abs_path_str, copy_path),
+        "&Yes\n&No",
+        2
+      )
       if option ~= 1 then
-        notify(vim.log.levels.INFO, "Aborting copy")
+        notify(vim.log.levels.INFO, "Aborting %s", display_name:lower())
         return
       end
 
@@ -721,11 +728,19 @@ M.tree = function(opts)
           goto continue
         end
 
+        if should_delete then
+          vim.fn.delete(line.abs_path, "rf")
+        end
+
         ::continue::
       end
 
       vim.schedule(function() recurse { _prev_action = "refresh", } end)
-      vim.cmd "doautocmd User TreeCopy"
+      if should_delete then
+        vim.cmd "doautocmd User TreeMove"
+      else
+        vim.cmd "doautocmd User TreeCopy"
+      end
       vim.api.nvim_feedkeys(
         vim.api.nvim_replace_termcodes("<Esc>", true, false, true),
         "n",
@@ -737,7 +752,7 @@ M.tree = function(opts)
     copy_lines(visual_or_current_lines)
   end
 
-  local keymap_fns = {
+  local normal_keymap_fns = {
     CloseTree = close_tree,
     Select = select,
     IncreaseLevel = inc_level,
@@ -752,25 +767,29 @@ M.tree = function(opts)
     Refresh = refresh,
     Delete = delete,
     Rename = rename,
-    Copy = copy,
+    Copy = function() copy_and_maybe_delete(false) end,
+    Move = function() copy_and_maybe_delete(true) end,
   }
 
-  for fn_name, fn in pairs(keymap_fns) do
+  local visual_keymap_fns = {
+    Delete = delete,
+    Copy = function() copy_and_maybe_delete(false) end,
+    Move = function() copy_and_maybe_delete(true) end,
+  }
+
+  for fn_name, fn in pairs(normal_keymap_fns) do
     vim.keymap.set("n", "<Plug>Tree" .. fn_name, fn, {
       buffer = opts._tree_bufnr,
       desc = "Tree: " .. fn_name,
     })
   end
 
-  vim.keymap.set("v", "<Plug>TreeDelete", keymap_fns["Delete"], {
-    buffer = opts._tree_bufnr,
-    desc = "Tree: Delete",
-  })
-
-  vim.keymap.set("v", "<Plug>TreeCopy", keymap_fns["Copy"], {
-    buffer = opts._tree_bufnr,
-    desc = "Tree: Copy",
-  })
+  for fn_name, fn in pairs(visual_keymap_fns) do
+    vim.keymap.set("v", "<Plug>Tree" .. fn_name, fn, {
+      buffer = opts._tree_bufnr,
+      desc = "Tree: " .. fn_name,
+    })
+  end
 end
 
 return M

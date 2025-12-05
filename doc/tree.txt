@@ -21,6 +21,7 @@ Plug remaps ............................................... |tree-plug-remaps|
 `<Plug>TreeDelete` ................................... |tree-<plug>treedelete|
 `<Plug>TreeRename` ................................... |tree-<plug>treerename|
 `<Plug>TreeCopy` ....................................... |tree-<plug>treecopy|
+`<Plug>TreeMove` ....................................... |tree-<plug>treemove|
 `<Plug>TreeRefresh` ................................. |tree-<plug>treerefresh|
 
 ==============================================================================
@@ -84,11 +85,12 @@ EXAMPLE CONFIG                                           *tree-example-config*
         vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
         vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = args.buf, })
         vim.keymap.set("n", "yy", "<Plug>TreeCopy", { buffer = args.buf, })
+        vim.keymap.set("n", "m", "<Plug>TreeMove", { buffer = args.buf, })
     
-        -- delete multiple items
+        -- supports multiple items
         vim.keymap.set("v", "d", "<Plug>TreeDelete", { buffer = args.buf, })
-        -- copy multiple items
         vim.keymap.set("v", "yy", "<Plug>TreeCopy", { buffer = args.buf, })
+        vim.keymap.set("v", "m", "<Plug>TreeMove", { buffer = args.buf, })
       end,
     })
 <
@@ -197,6 +199,16 @@ destination:
 
 - Trigger the `User TreeCopy` autocommand after copying
 - Refresh the tree (`TreeRefresh`)
+
+                                                                              
+`<PLUG>TREEMOVE`                                         *tree-<plug>treemove*
+
+Move the file or directory under the cursor or visual selection to a
+destination:
+
+- Trigger the `User TreeMove` autocommand after copying
+- Refresh the tree (`TreeRefresh`)
+- Uses `<Plug>TreeCopy` under the hood, just deletes as well
 
                                                                               
 `<PLUG>TREEREFRESH`                                   *tree-<plug>treerefresh*

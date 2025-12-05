@@ -5,6 +5,7 @@ tree-<plug>treedecreaselevel	tree.txt	/*tree-<plug>treedecreaselevel*
 tree-<plug>treedelete	tree.txt	/*tree-<plug>treedelete*
 tree-<plug>treeincreaselevel	tree.txt	/*tree-<plug>treeincreaselevel*
 tree-<plug>treeindir	tree.txt	/*tree-<plug>treeindir*
+tree-<plug>treemove	tree.txt	/*tree-<plug>treemove*
 tree-<plug>treeoutdir	tree.txt	/*tree-<plug>treeoutdir*
 tree-<plug>treerefresh	tree.txt	/*tree-<plug>treerefresh*
 tree-<plug>treerename	tree.txt	/*tree-<plug>treerename*
