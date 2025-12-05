@@ -443,11 +443,19 @@ M.tree = function(opts)
     local line = lines[vim.fn.line "."]
     if line then table.insert(opts._history, line.abs_path) end
 
-    recurse {
-      tree_dir = vim.fs.dirname(opts.tree_dir),
-      level = 1,
-      _prev_action = "out-dir",
-    }
+    if opts.level == 1 then
+      recurse {
+        tree_dir = vim.fs.dirname(opts.tree_dir),
+        level = 1,
+        _prev_action = "out-dir",
+      }
+    else
+      recurse {
+        tree_dir = vim.fs.dirname(opts.tree_dir),
+        level = opts.level + 1,
+        _prev_action = "update-level",
+      }
+    end
   end
 
   local in_dir = function()
