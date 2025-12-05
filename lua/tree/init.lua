@@ -295,7 +295,7 @@ M.tree = function(opts)
 
   vim.g.tree_winnr = (function()
     local dirname = vim.fs.joinpath(vim.fs.basename(opts.tree_dir), "/")
-    local title = ("tree %s -L %s"):format(dirname, opts.level)
+    local title = ("tree %s -L %s (%d lines)"):format(dirname, opts.level, #lines)
     local border_height = 2
     local width = math.max(#title, max_line_width + width_padding)
     local editor_height = vim.api.nvim_win_get_height(opts._curr_winnr)
