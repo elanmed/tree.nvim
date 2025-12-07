@@ -387,8 +387,6 @@ tree = function(await_co, opts)
   elseif opts._prev_action == "create" then
     if created_path_idx then
       vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { created_path_idx, 0, })
-    else
-      notify(vim.log.levels.ERROR, "Expected to find the created path when setting the cursor")
     end
   end
 
@@ -530,7 +528,7 @@ tree = function(await_co, opts)
     --- @param created_path string
     local get_created_path = function(created_path)
       local path = created_path
-      while vim.fs.dirname(path) ~= opts.tree_dir do
+      while vim.fs.dirname(path) ~= opts.tree_dir and vim.startswith(created_path, opts.tree_dir) do
         path = vim.fs.dirname(path)
       end
       return path
