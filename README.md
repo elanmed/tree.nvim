@@ -1,8 +1,18 @@
 # `tree.nvim`
 
-A simple file tree built with the `tree` cli
+A simple file tree built with the `vim.fs.*` utilities
 
-![demo](https://elanmed.dev/nvim-plugins/tree.png)
+## Features
+
+- 1 source file (800 LOC), 1 test file
+- Files are processed in batches with coroutines to prevent the UI from freezing when opening large directories
+- Safe and robust file system actions:
+  - Every action requires user confirmation
+  - A file cannot be renamed to an existing path
+  - A file cannot be copied or moved to a directory if another file with the same destination path already exists
+  - Intermediate directories are created when creating, renaming, copying, or moving files
+  - Paths can be specified as absolute or relative from the `cwd`
+- Multi-select for deleting, copying, and moving files
 
 ## API
 
@@ -11,7 +21,6 @@ A simple file tree built with the `tree` cli
 ```lua
 --- @class TreeOpts
 --- @field tree_dir? string
---- @field level? number
 --- @field tree_win_opts? vim.wo options to apply to the tree window
 --- @field tree_win_config? table configuration passed to `nvim_open_win`
 --- @field icons_enabled? boolean
@@ -26,7 +35,6 @@ M.tree = function(opts) end
 require "tree".tree({
   -- defaults to
   tree_dir = "[the directory of the current buffer]",
-  level = 1,
   icons_enabled = true,
   tree_win_opts = {},
   tree_win_config = {},
@@ -37,8 +45,6 @@ vim.api.nvim_create_autocmd("FileType", {
   callback = function(args)
     vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = args.buf, })
     vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = args.buf, })
-    vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel", { buffer = args.buf, })
-    vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel", { buffer = args.buf, })
     vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = args.buf, })
     vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
     vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
@@ -70,14 +76,6 @@ Close the tree window
 
 - If the cursor is on a directory, enter the directory (same as `InDir`)
 - If the cursor is on a file, close the tree window and open the file in the original window
-
-#### `<Plug>TreeIncreaseLevel`
-
-Increase the tree depth level by 1
-
-#### `<Plug>TreeDecreaseLevel`
-
-Decrease the tree depth level by 1
 
 #### `<Plug>TreeOutDir`
 

@@ -17,8 +17,6 @@ local T = MiniTest.new_set {
         }
         vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = true })
         vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = true })
-        vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel", { buffer = true })
-        vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel", { buffer = true })
         vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = true })
         vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = true })
         vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = true })
@@ -38,22 +36,6 @@ local T = MiniTest.new_set {
 T["tree"] = MiniTest.new_set()
 
 T["tree"]["plug remaps"] = MiniTest.new_set()
-T["tree"]["plug remaps"]["TreeIncreaseLevel"] = function()
-  expect.reference_screenshot(child.get_screenshot())
-  child.type_keys ">"
-  expect.reference_screenshot(child.get_screenshot())
-  child.type_keys ">"
-  expect.reference_screenshot(child.get_screenshot())
-end
-T["tree"]["plug remaps"]["TreeDecreaseLevel"] = function()
-  child.type_keys { ">", ">", }
-  child.type_keys ">"
-  expect.reference_screenshot(child.get_screenshot())
-  child.type_keys "<"
-  expect.reference_screenshot(child.get_screenshot())
-  child.type_keys "<"
-  expect.reference_screenshot(child.get_screenshot())
-end
 T["tree"]["plug remaps"]["TreeInDir"] = function()
   expect.reference_screenshot(child.get_screenshot())
   child.type_keys "l"

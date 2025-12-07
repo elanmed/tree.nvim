@@ -1,16 +1,15 @@
-*tree.txt*                                       Last change: 2025 November 30
+*tree.txt*                                       Last change: 2025 December 05
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
 
+Features ..................................................... |tree-features|
 API ............................................................... |tree-api|
 `tree` ........................................................... |tree-tree|
 Example config ......................................... |tree-example-config|
 Plug remaps ............................................... |tree-plug-remaps|
 `<Plug>TreeCloseTree` ............................. |tree-<plug>treeclosetree|
 `<Plug>TreeSelect` ................................... |tree-<plug>treeselect|
-`<Plug>TreeIncreaseLevel` ..................... |tree-<plug>treeincreaselevel|
-`<Plug>TreeDecreaseLevel` ..................... |tree-<plug>treedecreaselevel|
 `<Plug>TreeOutDir` ................................... |tree-<plug>treeoutdir|
 `<Plug>TreeInDir` ..................................... |tree-<plug>treeindir|
 `<Plug>TreeYankRelativePath` ............... |tree-<plug>treeyankrelativepath|
@@ -28,10 +27,23 @@ Plug remaps ............................................... |tree-plug-remaps|
 `TREE.NVIM`                                                   *tree-tree.nvim*
 
 
-A simple file tree built with the `tree` cli
+A simple file tree built with the `vim.fs.*` utilities
 
-demo <https://elanmed.dev/nvim-plugins/tree.png>
 
+------------------------------------------------------------------------------
+FEATURES                                                       *tree-features*
+
+
+- 1 source file (800 LOC), 1 test file
+- Files are processed in batches with coroutines to prevent the UI from
+  freezing when opening large directories
+- Safe and robust file system actions: - Every action requires user
+  confirmation - A file cannot be renamed to an existing path - A file cannot
+  be copied or moved to a directory if another file with the same destination
+  path already exists - Intermediate directories are created when creating,
+  renaming, copying, or moving files - Paths can be specified as absolute or
+  relative from the `cwd`
+- Multi-select for deleting, copying, and moving files
 
 ------------------------------------------------------------------------------
 API                                                                 *tree-api*
@@ -44,7 +56,6 @@ API                                                                 *tree-api*
 >lua
     --- @class TreeOpts
     --- @field tree_dir? string
-    --- @field level? number
     --- @field tree_win_opts? vim.wo options to apply to the tree window
     --- @field tree_win_config? table configuration passed to `nvim_open_win`
     --- @field icons_enabled? boolean
@@ -61,7 +72,6 @@ EXAMPLE CONFIG                                           *tree-example-config*
     require "tree".tree({
       -- defaults to
       tree_dir = "[the directory of the current buffer]",
-      level = 1,
       icons_enabled = true,
       tree_win_opts = {},
       tree_win_config = {},
@@ -72,8 +82,6 @@ EXAMPLE CONFIG                                           *tree-example-config*
       callback = function(args)
         vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = args.buf, })
         vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = args.buf, })
-        vim.keymap.set("n", "<", "<Plug>TreeDecreaseLevel", { buffer = args.buf, })
-        vim.keymap.set("n", ">", "<Plug>TreeIncreaseLevel", { buffer = args.buf, })
         vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = args.buf, })
         vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
         vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
@@ -112,18 +120,6 @@ Close the tree window
 - If the cursor is on a directory, enter the directory (same as `InDir`)
 - If the cursor is on a file, close the tree window and open the file in the
   original window
-
-                                                                              
-`<PLUG>TREEINCREASELEVEL`                       *tree-<plug>treeincreaselevel*
-
-Increase the tree depth level by 1
-
-
-                                                                              
-`<PLUG>TREEDECREASELEVEL`                       *tree-<plug>treedecreaselevel*
-
-Decrease the tree depth level by 1
-
 
                                                                               
 `<PLUG>TREEOUTDIR`                                     *tree-<plug>treeoutdir*

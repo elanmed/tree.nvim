@@ -1,9 +1,7 @@
 tree-<plug>treeclosetree	tree.txt	/*tree-<plug>treeclosetree*
 tree-<plug>treecopy	tree.txt	/*tree-<plug>treecopy*
 tree-<plug>treecreate	tree.txt	/*tree-<plug>treecreate*
-tree-<plug>treedecreaselevel	tree.txt	/*tree-<plug>treedecreaselevel*
 tree-<plug>treedelete	tree.txt	/*tree-<plug>treedelete*
-tree-<plug>treeincreaselevel	tree.txt	/*tree-<plug>treeincreaselevel*
 tree-<plug>treeindir	tree.txt	/*tree-<plug>treeindir*
 tree-<plug>treemove	tree.txt	/*tree-<plug>treemove*
 tree-<plug>treeoutdir	tree.txt	/*tree-<plug>treeoutdir*
@@ -16,6 +14,7 @@ tree-<plug>treeyankdirectory	tree.txt	/*tree-<plug>treeyankdirectory*
 tree-<plug>treeyankrelativepath	tree.txt	/*tree-<plug>treeyankrelativepath*
 tree-api	tree.txt	/*tree-api*
 tree-example-config	tree.txt	/*tree-example-config*
+tree-features	tree.txt	/*tree-features*
 tree-plug-remaps	tree.txt	/*tree-plug-remaps*
 tree-table-of-contents	tree.txt	/*tree-table-of-contents*
 tree-tree	tree.txt	/*tree-tree*

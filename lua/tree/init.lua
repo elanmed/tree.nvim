@@ -6,6 +6,37 @@ local vimscript_false = 0
 local ns_id = vim.api.nvim_create_namespace "Tree"
 vim.g.tree_winnr = -1
 
+local esc_to_normal = function()
+  local curr_mode = vim.fn.mode()
+  if curr_mode == "v" or curr_mode == "V" then
+    vim.api.nvim_feedkeys(
+      vim.api.nvim_replace_termcodes("<Esc>", true, false, true),
+      "n",
+      false
+    )
+  end
+end
+
+--- @class AwaitBatchedCoOpts
+--- @field batch_co thread
+--- @field await_co thread
+--- @param opts AwaitBatchedCoOpts
+local await_batched_co = function(opts)
+  local step
+  step = function()
+    coroutine.resume(opts.batch_co)
+    if coroutine.status(opts.batch_co) == "suspended" then
+      vim.schedule(step)
+    else
+      coroutine.resume(opts.await_co)
+    end
+  end
+  step()
+  if coroutine.status(opts.batch_co) == "suspended" then
+    coroutine.yield(opts.await_co)
+  end
+end
+
 --- @param level vim.log.levels
 --- @param msg string
 --- @param ... any
@@ -86,7 +117,6 @@ local get_visual_or_current_lines = function(lines)
 end
 
 --- @class Line
---- @field whitespace string
 --- @field abs_path string
 --- @field rel_path string
 --- @field formatted string
@@ -99,11 +129,10 @@ end
 --- @field contents TreeJson[]
 --- @field target string
 
---- @alias TreePrevAction "open"|"out-dir"|"in-dir"|"refresh"|"create"|"update-level"
+--- @alias TreePrevAction "open"|"out-dir"|"in-dir"|"refresh"|"create"
 
 --- @class TreeOpts
 --- @field tree_dir? string
---- @field level? number
 --- @field tree_win_opts? vim.wo
 --- @field icons_enabled? boolean
 --- @field tree_win_config? table
@@ -116,12 +145,13 @@ end
 --- @field _prev_action? TreePrevAction
 --- @field _history? string[]
 
+local tree
+--- @param await_co thread
 --- @param opts? TreeOpts
-M.tree = function(opts)
+tree = function(await_co, opts)
   opts = default(opts, {})
   opts = vim.deepcopy(opts)
 
-  opts.level = default(opts.level, 1)
   opts.icons_enabled = default(opts.icons_enabled, true)
   opts.tree_win_opts = default(opts.tree_win_opts, {})
   opts.tree_win_config = default(opts.tree_win_config, {})
@@ -171,34 +201,6 @@ M.tree = function(opts)
     return tree_bufnr
   end)()
 
-  -- -f Prints the full path prefix for each file.
-  -- -a All files are printed.  By default tree does not print hidden files (those beginning with a dot `.').
-  -- --no-report Omits printing of the file and directory report at the end of the tree listing.
-  -- -J Turn on JSON output. Outputs the directory tree as a JSON formatted array.
-  -- -L Max display depth of the directory tree.
-  local obj = vim.system(
-    { "tree", "-f", "-a", "--noreport", "-J", "-L", tostring(opts.level), },
-    { cwd = opts.tree_dir, }
-  ):wait()
-
-  if obj.code ~= 0 then
-    error "[tree.nvim] `tree` exit code was not `0`"
-  end
-
-  if not obj.stdout then
-    error "[tree.nvim] no stdout from `tree`"
-  end
-
-  --- @type TreeJson[]
-  local json = vim.json.decode(obj.stdout)
-  if not json[1] then
-    error "[tree.nvim] empty json from `tree`"
-  end
-
-  if json[1].type ~= "directory" then
-    error "[tree.nvim] top-level json object from `tree` is not a directory"
-  end
-
   --- @type Line[]
   local lines = {}
 
@@ -223,27 +225,27 @@ M.tree = function(opts)
   local history_line = nil
   local top_history = opts._history[#opts._history]
 
-  --- @param json_arg TreeJson[]
-  --- @param indent number
-  local function populate_lines(json_arg, indent)
-    for _, entry in ipairs(json_arg) do
-      local name = entry.type == "directory" and entry.name .. "/" or entry.name
+  local populate_lines_co = coroutine.create(function()
+    local idx = 1
+    for name, type in vim.fs.dir(opts.tree_dir) do
+      if idx % 50 == 0 then
+        coroutine.yield()
+      end
+      name = type == "directory" and name .. "/" or name
 
       local rel_path = vim.fs.normalize(name)
       local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, rel_path))
       local basename = vim.fs.basename(abs_path)
 
-      local icon_type = entry.type == "directory" and "directory" or "file"
+      local icon_type = type == "directory" and "directory" or "file"
       local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type, }
-      local whitespace = ("  "):rep(indent)
-      local formatted = " " .. whitespace .. icon_info.icon_char .. basename
+      local formatted = " " .. icon_info.icon_char .. basename
       max_line_width = math.max(max_line_width, #formatted)
 
       --- @type Line
       local line = {
         abs_path = abs_path,
-        rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path),
-        whitespace = whitespace,
+        rel_path = assert(vim.fs.relpath(vim.fn.getcwd(), abs_path)),
         formatted = formatted,
         icon_char = icon_info.icon_char,
         icon_hl = icon_info.icon_hl,
@@ -271,22 +273,27 @@ M.tree = function(opts)
         created_path_idx = #lines
       end
 
-      if entry.contents then
-        populate_lines(entry.contents, indent + 1)
-      end
+      idx = idx + 1
     end
-  end
+  end)
 
-  populate_lines(json[1].contents or {}, 0)
+  await_batched_co {
+    await_co = await_co,
+    batch_co = populate_lines_co,
+  }
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
   vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr, })
 
-  vim.schedule(function()
+  local highlight_lines_co = coroutine.create(function()
     for idx, line in ipairs(lines) do
+      if idx % 50 == 0 then
+        coroutine.yield()
+      end
+
       local leading_space = 1
-      local icon_hl_col_0_indexed = #line.whitespace + leading_space
+      local icon_hl_col_0_indexed = leading_space
       local row_1_indexed = idx
       local row_0_indexed = row_1_indexed - 1
       vim.hl.range(
@@ -298,12 +305,16 @@ M.tree = function(opts)
       )
     end
   end)
+  await_batched_co {
+    await_co = await_co,
+    batch_co = highlight_lines_co,
+  }
 
   local width_padding = 10
 
   vim.g.tree_winnr = (function()
     local dirname = vim.fs.joinpath(vim.fs.basename(opts.tree_dir), "/")
-    local title = ("tree %s -L %s (%d lines)"):format(dirname, opts.level, #lines)
+    local title = ("%s (%d lines)"):format(dirname, #lines)
     local border_height = 2
     local width = math.max(#title, max_line_width + width_padding)
     local editor_height = vim.api.nvim_win_get_height(opts._curr_winnr)
@@ -356,12 +367,6 @@ M.tree = function(opts)
     else
       notify(vim.log.levels.ERROR, "Expected to find the prev dir when setting the cursor")
     end
-  elseif opts._prev_action == "update-level" then
-    if prev_path_idx then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_path_idx, 0, })
-    else
-      notify(vim.log.levels.ERROR, "Expected to find the prev path when setting the cursor")
-    end
   elseif opts._prev_action == "refresh" then
     local row = (function()
       if opts._prev_idx == nil then return 1 end
@@ -388,7 +393,6 @@ M.tree = function(opts)
   end
 
   --- @class RecurseOpts
-  --- @field level? number
   --- @field tree_dir? string
   --- @field _created_path? string
   --- @field _prev_action TreePrevAction
@@ -396,12 +400,11 @@ M.tree = function(opts)
   --- @param r_opts RecurseOpts
   local recurse = function(r_opts)
     r_opts = vim.deepcopy(r_opts)
-    r_opts.level = default(r_opts.level, opts.level)
     r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
 
-    M.tree {
+    local recurse_cb_co = coroutine.create(tree)
+    coroutine.resume(recurse_cb_co, recurse_cb_co, {
       tree_dir = r_opts.tree_dir,
-      level = r_opts.level,
       _prev_action = r_opts._prev_action,
       _created_path = r_opts._created_path,
       _prev_path = (function()
@@ -418,44 +421,17 @@ M.tree = function(opts)
       _curr_bufnr = opts._curr_bufnr,
       _history = opts._history,
       _prev_idx = vim.fn.line ".",
-    }
-  end
-
-  local inc_level = function()
-    recurse {
-      level = opts.level + 1,
-      _prev_action = "update-level",
-    }
-  end
-
-  local dec_level = function()
-    if opts.level == 1 then
-      notify(vim.log.levels.INFO, "level must be greater than 0")
-      return
-    end
-    recurse {
-      level = opts.level - 1,
-      _prev_action = "update-level",
-    }
+    })
   end
 
   local out_dir = function()
     local line = lines[vim.fn.line "."]
     if line then table.insert(opts._history, line.abs_path) end
 
-    if opts.level == 1 then
-      recurse {
-        tree_dir = vim.fs.dirname(opts.tree_dir),
-        level = 1,
-        _prev_action = "out-dir",
-      }
-    else
-      recurse {
-        tree_dir = vim.fs.dirname(opts.tree_dir),
-        level = opts.level + 1,
-        _prev_action = "update-level",
-      }
-    end
+    recurse {
+      tree_dir = vim.fs.dirname(opts.tree_dir),
+      _prev_action = "out-dir",
+    }
   end
 
   local in_dir = function()
@@ -464,7 +440,6 @@ M.tree = function(opts)
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       recurse {
         tree_dir = line.abs_path,
-        level = 1,
         _prev_action = "in-dir",
       }
     end
@@ -624,6 +599,7 @@ M.tree = function(opts)
       local option = vim.fn.confirm(("Delete?\n%s"):format(abs_path_str), "&Yes\n&No", 2)
       if option ~= 1 then
         notify(vim.log.levels.INFO, "Aborting delete")
+        esc_to_normal()
         return
       end
 
@@ -634,13 +610,9 @@ M.tree = function(opts)
         end
       end
 
-      vim.schedule(function() recurse { _prev_action = "refresh", } end)
       vim.cmd "doautocmd User TreeDelete"
-      vim.api.nvim_feedkeys(
-        vim.api.nvim_replace_termcodes("<Esc>", true, false, true),
-        "n",
-        false
-      )
+      esc_to_normal()
+      vim.schedule(function() recurse { _prev_action = "refresh", } end)
     end
 
     local visual_or_current_lines = get_visual_or_current_lines(lines)
@@ -684,6 +656,7 @@ M.tree = function(opts)
 
     if raw_copy_path == "" then
       notify(vim.log.levels.INFO, "Aborting %s", display_name:lower())
+      esc_to_normal()
       return
     end
     local copy_path = vim.fs.normalize(vim.fs.abspath(raw_copy_path))
@@ -703,12 +676,14 @@ M.tree = function(opts)
       )
       if option ~= 1 then
         notify(vim.log.levels.INFO, "Aborting %s", display_name:lower())
+        esc_to_normal()
         return
       end
 
       local mkdir_success = vim.fn.mkdir(copy_path, "p")
       if mkdir_success == vimscript_false then
         notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", copy_path)
+        esc_to_normal()
         return
       end
 
@@ -743,17 +718,13 @@ M.tree = function(opts)
         ::continue::
       end
 
-      vim.schedule(function() recurse { _prev_action = "refresh", } end)
       if should_delete then
         vim.cmd "doautocmd User TreeMove"
       else
         vim.cmd "doautocmd User TreeCopy"
       end
-      vim.api.nvim_feedkeys(
-        vim.api.nvim_replace_termcodes("<Esc>", true, false, true),
-        "n",
-        false
-      )
+      esc_to_normal()
+      vim.schedule(function() recurse { _prev_action = "refresh", } end)
     end
 
     local visual_or_current_lines = get_visual_or_current_lines(lines)
@@ -763,8 +734,6 @@ M.tree = function(opts)
   local normal_keymap_fns = {
     CloseTree = close_tree,
     Select = select,
-    IncreaseLevel = inc_level,
-    DecreaseLevel = dec_level,
     OutDir = out_dir,
     InDir = in_dir,
     YankRelativePath = yank_rel_path,
@@ -798,6 +767,12 @@ M.tree = function(opts)
       desc = "Tree: " .. fn_name,
     })
   end
+end
+
+--- @param opts? TreeOpts
+M.tree = function(opts)
+  local await_co = coroutine.create(tree)
+  coroutine.resume(await_co, await_co, opts)
 end
 
 return M
