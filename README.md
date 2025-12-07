@@ -13,6 +13,11 @@ A simple file tree built with the `vim.fs.*` utilities
   - Intermediate directories are created when creating, renaming, copying, or moving files
   - Paths can be specified as absolute or relative from the `cwd`
 - Multi-select for deleting, copying, and moving files
+- Intelligent cursor placement
+  - When creating, renaming, copying, or moving files, the cursor is placed at: the destination file, or it's ancestor in the open directory, or the previous cursor index
+  - When moving to a parent directory, the cursor is placed at the previous parent
+    - The previous cursor path is stored in a history stack for moving to a child directory
+  - When moving to a child directory, the cursor is placed at: the top of the history stack, or the previous cursor index
 
 ## API
 
