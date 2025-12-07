@@ -176,7 +176,7 @@ tree = function(await_co, opts)
   local curr_dir = (function()
     -- vim opened with no arguments
     if curr_bufname_abs_path == "" then
-      return vim.fn.getcwd()
+      return vim.fs.abspath(vim.fn.getcwd())
     end
 
     local dir = curr_bufname_abs_path
@@ -245,7 +245,7 @@ tree = function(await_co, opts)
       --- @type Line
       local line = {
         abs_path = abs_path,
-        rel_path = assert(vim.fs.relpath(vim.fn.getcwd(), abs_path)),
+        rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path),
         formatted = formatted,
         icon_char = icon_info.icon_char,
         icon_hl = icon_info.icon_hl,
