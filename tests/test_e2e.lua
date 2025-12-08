@@ -103,4 +103,64 @@ T["tree"]["plug remaps"]["TreeYankBasename"] = function()
   MiniTest.expect.equality(child.fn.getreg "b", "mod")
 end
 
+T["tree"]["plug remaps"]["TreeCreate"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeCreate"]["file"] = function() end
+T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function() end
+T["tree"]["plug remaps"]["TreeCreate"]["children path"] = function() end
+T["tree"]["plug remaps"]["TreeCreate"]["parent path"] = function() end
+T["tree"]["plug remaps"]["TreeCreate"]["abort empty"] = function() end
+T["tree"]["plug remaps"]["TreeCreate"]["abort confirmation"] = function() end
+
+T["tree"]["plug remaps"]["TreeRename"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeRename"]["file"] = function() end
+
+T["tree"]["plug remaps"]["TreeRename"]["directory"] = function() end
+T["tree"]["plug remaps"]["TreeRename"]["to parent path"] = function() end
+T["tree"]["plug remaps"]["TreeRename"]["to child path"] = function() end
+T["tree"]["plug remaps"]["TreeRename"]["abort empty"] = function() end
+T["tree"]["plug remaps"]["TreeRename"]["abort confirmation"] = function() end
+T["tree"]["plug remaps"]["TreeRename"]["destination exists"] = function() end
+
+T["tree"]["plug remaps"]["TreeDelete"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeDelete"]["single file"] = function() end
+T["tree"]["plug remaps"]["TreeDelete"]["directory"] = function() end
+T["tree"]["plug remaps"]["TreeDelete"]["abort confirmation"] = function() end
+T["tree"]["plug remaps"]["TreeDelete"]["visual mode"] = function() end
+
+T["tree"]["plug remaps"]["TreeCopy"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeCopy"]["single file"] = function() end
+T["tree"]["plug remaps"]["TreeCopy"]["directory"] = function() end
+T["tree"]["plug remaps"]["TreeCopy"]["to parent path"] = function() end
+T["tree"]["plug remaps"]["TreeCopy"]["abort empty"] = function() end
+T["tree"]["plug remaps"]["TreeCopy"]["abort confirmation"] = function() end
+T["tree"]["plug remaps"]["TreeCopy"]["visual mode"] = function() end
+T["tree"]["plug remaps"]["TreeCopy"]["destination exists"] = function() end
+
+T["tree"]["plug remaps"]["TreeMove"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeMove"]["single file"] = function() end
+T["tree"]["plug remaps"]["TreeMove"]["directory"] = function() end
+T["tree"]["plug remaps"]["TreeMove"]["to parent path"] = function() end
+T["tree"]["plug remaps"]["TreeMove"]["abort empty"] = function() end
+T["tree"]["plug remaps"]["TreeMove"]["abort confirmation"] = function() end
+T["tree"]["plug remaps"]["TreeMove"]["visual mode"] = function() end
+T["tree"]["plug remaps"]["TreeMove"]["files deleted"] = function() end
+
+T["tree"]["cursor placement"] = MiniTest.new_set()
+T["tree"]["cursor placement"]["curr-bufname"] = MiniTest.new_set()
+T["tree"]["cursor placement"]["curr-bufname"]["found"] = function() end
+T["tree"]["cursor placement"]["curr-bufname"]["not found"] = function() end
+T["tree"]["cursor placement"]["prev-idx"] = function() end
+
+T["tree"]["cursor placement"]["history-stack"] = MiniTest.new_set()
+T["tree"]["cursor placement"]["history-stack"]["found"] = function() end
+T["tree"]["cursor placement"]["history-stack"]["not found"] = function() end
+
+T["tree"]["cursor placement"]["prev-dir-idx"] = MiniTest.new_set()
+T["tree"]["cursor placement"]["prev-dir-idx"]["found"] = function() end
+T["tree"]["cursor placement"]["prev-dir-idx"]["not found"] = function() end
+
+T["tree"]["cursor placement"]["dest-path"] = MiniTest.new_set()
+T["tree"]["cursor placement"]["dest-path"]["found"] = function() end
+T["tree"]["cursor placement"]["dest-path"]["not found fallback"] = function() end
+
 return T
