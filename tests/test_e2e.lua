@@ -426,7 +426,6 @@ T["tree"]["plug remaps"]["TreeCopy"]["directory"] = function()
     "Copy\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
   )
 end
-
 T["tree"]["plug remaps"]["TreeCopy"]["to parent path"] = function()
   child.type_keys { "l", "j", }
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
@@ -440,7 +439,6 @@ T["tree"]["plug remaps"]["TreeCopy"]["to parent path"] = function()
     "Copy\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir"
   )
 end
-
 T["tree"]["plug remaps"]["TreeCopy"]["abort empty"] = function()
   child.type_keys { "l", "j", }
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
@@ -449,7 +447,6 @@ T["tree"]["plug remaps"]["TreeCopy"]["abort empty"] = function()
   expect_message "[tree.nvim]: Aborting copy"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
 end
-
 T["tree"]["plug remaps"]["TreeCopy"]["abort confirmation"] = function()
   child.type_keys { "l", "j", }
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
@@ -461,7 +458,6 @@ T["tree"]["plug remaps"]["TreeCopy"]["abort confirmation"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua", false)
 end
-
 T["tree"]["plug remaps"]["TreeCopy"]["visual mode"] = function()
   child.type_keys "l"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/dir_c")
@@ -485,7 +481,6 @@ T["tree"]["plug remaps"]["TreeCopy"]["visual mode"] = function()
     .. vim.fs.abspath "test_dir/dir_b"
   )
 end
-
 T["tree"]["plug remaps"]["TreeCopy"]["destination exists"] = function()
   child.type_keys { "l", "j", }
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
@@ -653,7 +648,28 @@ T["tree"]["cursor placement"]["prev-dir-idx"] = function()
 end
 
 T["tree"]["cursor placement"]["dest-path"] = MiniTest.new_set()
-T["tree"]["cursor placement"]["dest-path"]["found"] = function() end
-T["tree"]["cursor placement"]["dest-path"]["not found fallback"] = function() end
+T["tree"]["cursor placement"]["dest-path"]["found"] = function()
+  child.type_keys "o"
+  child.type_keys "new_file.txt"
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_cursor_line(3, " 󰦪 new_file.txt")
+end
+T["tree"]["cursor placement"]["dest-path"]["found nested"] = function()
+  child.type_keys "o"
+  child.type_keys "new_nested/path/file.lua"
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_cursor_line(3, " 󰉋 new_nested")
+end
+T["tree"]["cursor placement"]["not found fallback"] = function()
+  child.type_keys "l"
+  expect_cursor_line(1, " 󰉋 dir_c")
+  child.type_keys "o"
+  child.type_keys "../new_file.txt"
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_cursor_line(1, " 󰉋 dir_c")
+end
 
 return T
