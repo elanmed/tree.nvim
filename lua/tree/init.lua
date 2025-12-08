@@ -375,14 +375,13 @@ tree = function(await_co, opts)
   vim.api.nvim_win_set_buf(vim.g.tree_winnr, opts._tree_bufnr)
 
   if opts._cursor_pos_type == "curr-bufname" then
-    if curr_bufname_idx then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx, 0, })
-    end
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx or 1, 0, })
   elseif opts._cursor_pos_type == "history-stack" then
     if history_line then
       vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { history_line, 0, })
       table.remove(opts._history)
     else
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0, })
       opts._history = {}
     end
   elseif opts._cursor_pos_type == "prev-dir-idx" then
@@ -391,7 +390,7 @@ tree = function(await_co, opts)
     else
       notify(vim.log.levels.ERROR, "Expected to find the prev dir when setting the cursor")
     end
-  elseif opts._cursor_pos_type == "prev-dir-idx" then
+  elseif opts._cursor_pos_type == "prev-idx" then
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, {
       normalize_prev_idx { lines = lines, _prev_idx = opts._prev_idx, },
       0,
@@ -405,6 +404,8 @@ tree = function(await_co, opts)
         0,
       })
     end
+  else
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0, })
   end
 
   --- @class RecurseOpts

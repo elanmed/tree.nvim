@@ -628,14 +628,28 @@ T["tree"]["cursor placement"]["prev-idx"]["cursor is forced to the top of the bu
 end
 
 T["tree"]["cursor placement"]["history-stack"] = MiniTest.new_set()
-T["tree"]["cursor placement"]["history-stack"]["found"] = function() end
-T["tree"]["cursor placement"]["history-stack"]["not found"] = function() end
+T["tree"]["cursor placement"]["history-stack"]["found"] = function()
+  child.type_keys "llj"
+  expect_cursor_line(2, " 󰌞 index.js")
+  child.type_keys "hhll"
+  expect_cursor_line(2, " 󰌞 index.js")
+end
+T["tree"]["cursor placement"]["history-stack"]["not found"] = function()
+  child.type_keys "llj"
+  expect_cursor_line(2, " 󰌞 index.js")
+  child.type_keys "hhj"
+  expect_cursor_line(2, " 󰉋 dir_b")
+  child.type_keys "l"
+  expect_cursor_line(1, "  .env") -- not 2
+end
 
 T["tree"]["cursor placement"]["prev-dir-idx"] = function()
+  child.type_keys "j"
+  expect_cursor_line(2, " 󰉋 dir_b")
   child.type_keys "l"
-  expect_cursor_line(1, " 󰉋 dir_c")
+  expect_cursor_line(1, "  .env")
   child.type_keys "h"
-  expect_cursor_line(1, " 󰉋 dir_a")
+  expect_cursor_line(2, " 󰉋 dir_b") -- not 1
 end
 
 T["tree"]["cursor placement"]["dest-path"] = MiniTest.new_set()
