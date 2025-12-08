@@ -122,8 +122,8 @@ end
 --- @param opts GetDestPathOpts
 local normalize_dest_path = function(opts)
   local dest_path = opts.path
-  while vim.fs.dirname(opts.path) ~= opts.tree_dir and vim.startswith(opts.path, opts.tree_dir) do
-    dest_path = vim.fs.dirname(opts.path)
+  while vim.fs.dirname(dest_path) ~= opts.tree_dir and vim.startswith(dest_path, opts.tree_dir) do
+    dest_path = vim.fs.dirname(dest_path)
   end
   return dest_path
 end
