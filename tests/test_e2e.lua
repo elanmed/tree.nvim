@@ -20,10 +20,11 @@ local new_paths = {
   new_nested_file_path_full,
 }
 
---- @param path string
-local fs_exists = function(path)
-  return vim.uv.fs_stat(path) ~= nil
-end
+local expect_fs_exists = MiniTest.new_expectation(
+  "file system path exists",
+  function(path) return vim.uv.fs_stat(path) ~= nil end,
+  function(path) return string.format("Path: %s", path) end
+)
 
 local validate_confirm_args = function(ref_msg_pattern)
   local args = child.lua_get "_G.confirm_args"
@@ -160,7 +161,7 @@ T["tree"]["plug remaps"]["TreeCreate"]["file"] = function()
   mock_confirm(1)
   child.type_keys "<CR>"
 
-  eq(fs_exists(new_file_path_full), true)
+  expect_fs_exists(new_file_path_full)
   validate_confirm_args("Create? " .. new_file_path_full)
 end
 T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function() end
