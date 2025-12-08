@@ -11,7 +11,7 @@ A simple file tree built with the `vim.fs.*` utilities
   - A file cannot be renamed to an existing path
   - A file cannot be copied or moved to a directory if another file with the same destination path already exists
   - Intermediate directories are created when creating, renaming, copying, or moving files
-  - Paths can be specified as absolute or relative from the `cwd`
+  - Paths can start from the root of the file system or the `cwd`, and include relative specifiers like `../../` etc
 - Multi-select for deleting, copying, and moving files
 - Intelligent cursor placement
   - When creating, renaming, copying, or moving files, the cursor is placed at: the destination file, or it's ancestor in the open directory, or the previous cursor index
