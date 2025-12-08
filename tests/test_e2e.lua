@@ -604,12 +604,27 @@ T["tree"]["cursor placement"]["curr-bufname"]["not found"] = function()
   expect_cursor_line(1, " 󰉋 dir_c")
 end
 
-T["tree"]["cursor placement"]["prev-idx"] = function()
+T["tree"]["cursor placement"]["prev-idx"] = MiniTest.new_set()
+T["tree"]["cursor placement"]["prev-idx"]["same cursor position before and after"] = function()
   child.type_keys "lj"
   expect_cursor_line(2, "  init.lua")
   mock_confirm(1)
   child.type_keys "dd"
   expect_cursor_line(2, " 󰛦 mod.ts")
+end
+T["tree"]["cursor placement"]["prev-idx"]["cursor is forced to an earlier index"] = function()
+  child.type_keys "ljj"
+  expect_cursor_line(3, " 󰛦 mod.ts")
+  mock_confirm(1)
+  child.type_keys "dd"
+  expect_cursor_line(2, "  init.lua")
+end
+T["tree"]["cursor placement"]["prev-idx"]["cursor is forced to the top of the buf"] = function()
+  child.type_keys "lVjj"
+  expect_cursor_line(3, " 󰛦 mod.ts")
+  mock_confirm(1)
+  child.type_keys "d"
+  expect_cursor_line(1, "")
 end
 
 T["tree"]["cursor placement"]["history-stack"] = MiniTest.new_set()
