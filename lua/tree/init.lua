@@ -187,7 +187,7 @@ tree = function(await_co, opts)
   opts.tree_win_opts = default(opts.tree_win_opts, {})
   opts.tree_win_config = default(opts.tree_win_config, {})
   opts._history = default(opts._history, {})
-  opts._cursor_pos_type = default(opts._cursor_pos_type, "open")
+  opts._cursor_pos_type = default(opts._cursor_pos_type, "curr-bufname")
 
   opts._curr_winnr = (function()
     if opts._curr_winnr then
