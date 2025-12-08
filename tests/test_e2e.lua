@@ -23,7 +23,21 @@ local new_paths = {
 local expect_fs_exists = MiniTest.new_expectation(
   "file system path exists",
   function(path) return vim.uv.fs_stat(path) ~= nil end,
-  function(path) return string.format("Path: %s", path) end
+  function(path) return string.format("Path does not exist: %s", path) end
+)
+
+local expect_lines = MiniTest.new_expectation(
+  "buffer lines equality",
+  function(expected_lines)
+    local actual_lines = child.api.nvim_buf_get_lines(child.api.nvim_get_current_buf(), 0, -1, false)
+    return vim.deep_equal(actual_lines, expected_lines)
+  end,
+  function(expected_lines)
+    local actual_lines = child.api.nvim_buf_get_lines(child.api.nvim_get_current_buf(), 0, -1, false)
+    return string.format("Expected lines:\n%s\nActual lines:\n%s",
+      vim.inspect(expected_lines),
+      vim.inspect(actual_lines))
+  end
 )
 
 local validate_confirm_args = function(ref_msg_pattern)
@@ -83,32 +97,63 @@ T["tree"] = MiniTest.new_set()
 
 T["tree"]["plug remaps"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeInDir"] = function()
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰉋 dir_a",
+    " 󰉋 dir_b",
+  }
   child.type_keys "l"
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰉋 dir_c",
+    "  init.lua",
+    " 󰛦 mod.ts",
+  }
   child.type_keys "l"
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰌝 index.html",
+    " 󰌞 index.js",
+  }
 end
 T["tree"]["plug remaps"]["TreeOutDir"] = function()
   child.type_keys { "l", "l", }
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰌝 index.html",
+    " 󰌞 index.js",
+  }
   child.type_keys "h"
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰉋 dir_c",
+    "  init.lua",
+    " 󰛦 mod.ts",
+  }
   child.type_keys "h"
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰉋 dir_a",
+    " 󰉋 dir_b",
+  }
 end
 T["tree"]["plug remaps"]["TreeSelect"] = function()
   child.type_keys { "l", "l", }
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰌝 index.html",
+    " 󰌞 index.js",
+  }
   child.type_keys "<cr>"
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    "<div>content</div>",
+  }
   child.lua [[M.tree()]]
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰌝 index.html",
+    " 󰌞 index.js",
+  }
 end
 T["tree"]["plug remaps"]["TreeCloseTree"] = function()
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines {
+    " 󰉋 dir_a",
+    " 󰉋 dir_b",
+  }
   child.type_keys "q"
-  expect.reference_screenshot(child.get_screenshot())
+  expect_lines { "", }
 end
 T["tree"]["plug remaps"]["TreeYankRelativePath"] = function()
   child.type_keys { "y", "r", }
