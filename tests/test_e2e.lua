@@ -47,6 +47,26 @@ local expect_message = MiniTest.new_expectation(
   end
 )
 
+local expect_cursor_line = MiniTest.new_expectation(
+  "cursor line number and text",
+  function(expected_line, expected_text)
+    local actual_line = child.fn.line "."
+    local actual_text = child.fn.getline "."
+    return actual_line == expected_line and actual_text == expected_text
+  end,
+  function(expected_line, expected_text)
+    local actual_line = child.fn.line "."
+    local actual_text = child.fn.getline "."
+    return string.format(
+      "Expected cursor at line %d with text '%s', actual line %d with text '%s'",
+      expected_line,
+      expected_text,
+      actual_line,
+      actual_text
+    )
+  end
+)
+
 local validate_confirm_args = function(ref_msg_pattern)
   local args = child.lua_get "_G.confirm_args"
   eq(args[1], ref_msg_pattern)
@@ -573,9 +593,24 @@ end
 
 T["tree"]["cursor placement"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["curr-bufname"] = MiniTest.new_set()
-T["tree"]["cursor placement"]["curr-bufname"]["found"] = function() end
-T["tree"]["cursor placement"]["curr-bufname"]["not found"] = function() end
-T["tree"]["cursor placement"]["prev-idx"] = function() end
+T["tree"]["cursor placement"]["curr-bufname"]["found"] = function()
+  child.lua [[vim.cmd.edit("test_dir/dir_a/init.lua")]]
+  child.lua [[M.tree()]]
+  expect_cursor_line(2, "  init.lua")
+end
+T["tree"]["cursor placement"]["curr-bufname"]["not found"] = function()
+  child.lua [[vim.cmd.edit("test_dir/dir_b/Makefile")]]
+  child.lua [[M.tree({ tree_dir = "./test_dir/dir_a" })]]
+  expect_cursor_line(1, " 󰉋 dir_c")
+end
+
+T["tree"]["cursor placement"]["prev-idx"] = function()
+  child.type_keys "lj"
+  expect_cursor_line(2, "  init.lua")
+  mock_confirm(1)
+  child.type_keys "dd"
+  expect_cursor_line(2, " 󰛦 mod.ts")
+end
 
 T["tree"]["cursor placement"]["history-stack"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["history-stack"]["found"] = function() end
