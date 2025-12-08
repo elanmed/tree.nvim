@@ -4,15 +4,6 @@ local expect = MiniTest.expect
 local eq = MiniTest.expect.equality
 local child = MiniTest.new_child_neovim()
 
-local root_path = vim.fs.joinpath(vim.fn.getcwd(), "test_dir")
-local new_file_path = "new_file.txt"
-local new_dir_path = "new_dir/"
-local new_nested_file_path = "new_nested/path/file.lua"
-
-local new_file_path_full = vim.fs.joinpath(root_path, new_file_path)
-local new_dir_path_full = vim.fs.normalize(vim.fs.joinpath(root_path, new_dir_path))
-local new_nested_file_path_full = vim.fs.joinpath(root_path, new_nested_file_path)
-
 local expect_fs_exists = MiniTest.new_expectation(
   "file system path exists",
   function(path, should_exist)
@@ -101,9 +92,18 @@ local T = MiniTest.new_set {
       ]]
     end,
     post_case = function()
-      child.fn.delete(new_file_path_full, "rf")
-      child.fn.delete(new_dir_path_full, "rf")
-      child.fn.delete(vim.fs.joinpath(root_path, "new_nested"), "rf")
+      child.fn.delete("test_dir", "rf")
+
+      child.fn.mkdir "test_dir"
+      child.fn.mkdir "test_dir/dir_a"
+      child.fn.writefile({}, "test_dir/dir_a/init.lua")
+      child.fn.writefile({}, "test_dir/dir_a/mod.ts")
+      child.fn.mkdir "test_dir/dir_a/dir_c"
+      child.fn.writefile({ "<div>content</div>", }, "test_dir/dir_a/dir_c/index.html")
+      child.fn.writefile({}, "test_dir/dir_a/dir_c/index.js")
+      child.fn.mkdir "test_dir/dir_b"
+      child.fn.writefile({}, "test_dir/dir_b/Makefile")
+      child.fn.writefile({}, "test_dir/dir_b/.env")
     end,
     post_once = child.stop,
   },
@@ -214,40 +214,40 @@ T["tree"]["plug remaps"]["TreeCreate"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeCreate"]["file"] = function()
   child.type_keys "o"
   eq(child.fn.getcmdline(), "test_dir/")
-  child.type_keys(new_file_path)
+  child.type_keys "new_file.txt"
   mock_confirm(1)
   child.type_keys "<CR>"
-  expect_fs_exists(new_file_path_full)
-  validate_confirm_args("Create? " .. new_file_path_full)
+  expect_fs_exists(vim.fs.abspath "test_dir/new_file.txt")
+  validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_file.txt")
 end
 T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function()
   child.type_keys "o"
   eq(child.fn.getcmdline(), "test_dir/")
-  child.type_keys(new_dir_path)
+  child.type_keys "new_dir/"
   mock_confirm(1)
   child.type_keys "<CR>"
-  expect_fs_exists(new_dir_path_full)
-  validate_confirm_args("Create? " .. new_dir_path_full)
+  expect_fs_exists(vim.fs.abspath "test_dir/new_dir")
+  validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_dir")
 end
 T["tree"]["plug remaps"]["TreeCreate"]["children path"] = function()
   child.type_keys "o"
   eq(child.fn.getcmdline(), "test_dir/")
-  child.type_keys(new_nested_file_path)
+  child.type_keys "new_nested/path/file.lua"
   mock_confirm(1)
   child.type_keys "<CR>"
-  expect_fs_exists(new_nested_file_path_full)
-  validate_confirm_args("Create? " .. new_nested_file_path_full)
+  expect_fs_exists(vim.fs.abspath "test_dir/new_nested/path/file.lua")
+  validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_nested/path/file.lua")
 end
 T["tree"]["plug remaps"]["TreeCreate"]["parent path"] = function()
   child.type_keys "l"
   child.type_keys "o"
   eq(child.fn.getcmdline(), "test_dir/dir_a/")
   child.type_keys "../"
-  child.type_keys(new_file_path)
+  child.type_keys "new_file.txt"
   mock_confirm(1)
   child.type_keys "<CR>"
-  expect_fs_exists(new_file_path_full)
-  validate_confirm_args("Create? " .. new_file_path_full)
+  expect_fs_exists(vim.fs.abspath "test_dir/new_file.txt")
+  validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_file.txt")
 end
 T["tree"]["plug remaps"]["TreeCreate"]["abort empty"] = function()
   child.type_keys "o"
@@ -258,22 +258,82 @@ end
 T["tree"]["plug remaps"]["TreeCreate"]["abort confirmation"] = function()
   child.type_keys "o"
   eq(child.fn.getcmdline(), "test_dir/")
-  child.type_keys(new_file_path)
+  child.type_keys "new_file.txt"
   mock_confirm(2)
   child.type_keys "<CR>"
   expect_message "[tree.nvim]: Aborting create"
-  expect_fs_exists(new_file_path_full, false)
+  expect_fs_exists(vim.fs.abspath "test_dir/new_file.txt", false)
 end
 
 T["tree"]["plug remaps"]["TreeRename"] = MiniTest.new_set()
-T["tree"]["plug remaps"]["TreeRename"]["file"] = function() end
-
-T["tree"]["plug remaps"]["TreeRename"]["directory"] = function() end
-T["tree"]["plug remaps"]["TreeRename"]["to parent path"] = function() end
-T["tree"]["plug remaps"]["TreeRename"]["to child path"] = function() end
-T["tree"]["plug remaps"]["TreeRename"]["abort empty"] = function() end
-T["tree"]["plug remaps"]["TreeRename"]["abort confirmation"] = function() end
-T["tree"]["plug remaps"]["TreeRename"]["destination exists"] = function() end
+T["tree"]["plug remaps"]["TreeRename"]["file"] = function()
+  child.type_keys { "l", "j", }
+  child.type_keys "r"
+  local original_path = child.fn.getcmdline()
+  eq(original_path, "test_dir/dir_a/init.lua")
+  child.type_keys { "<C-u>", "test_dir/dir_a/renamed.lua", }
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/renamed.lua", true)
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua", false)
+end
+T["tree"]["plug remaps"]["TreeRename"]["directory"] = function()
+  child.type_keys "r"
+  local original_path = child.fn.getcmdline()
+  eq(original_path, "test_dir/dir_a")
+  child.type_keys { "<C-u>", "test_dir/renamed_dir", }
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_fs_exists(vim.fs.abspath "test_dir/renamed_dir", true)
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", false)
+end
+T["tree"]["plug remaps"]["TreeRename"]["to parent path"] = function()
+  child.type_keys { "l", "j", }
+  child.type_keys "r"
+  eq(child.fn.getcmdline(), "test_dir/dir_a/init.lua")
+  child.type_keys { "<C-u>", "test_dir/renamed.lua", }
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_fs_exists(vim.fs.abspath "test_dir/renamed.lua", true)
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua", false)
+end
+T["tree"]["plug remaps"]["TreeRename"]["to child path"] = function()
+  child.type_keys "r"
+  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  child.type_keys { "<C-u>", "test_dir/dir_b/renamed_dir", }
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_b/renamed_dir", true)
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", false)
+end
+T["tree"]["plug remaps"]["TreeRename"]["abort empty"] = function()
+  child.type_keys "r"
+  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  child.type_keys "<C-u>"
+  child.type_keys "<CR>"
+  expect_message "[tree.nvim]: Aborting rename"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", true)
+end
+T["tree"]["plug remaps"]["TreeRename"]["abort confirmation"] = function()
+  child.type_keys "r"
+  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  child.type_keys { "<C-u>", "test_dir/renamed_dir", }
+  mock_confirm(2)
+  child.type_keys "<CR>"
+  expect_message "[tree.nvim]: Aborting rename"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", true)
+  expect_fs_exists(vim.fs.abspath "test_dir/renamed_dir", false)
+end
+T["tree"]["plug remaps"]["TreeRename"]["destination exists"] = function()
+  child.type_keys "r"
+  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  child.type_keys { "<C-u>", "test_dir/dir_b", }
+  mock_confirm(1)
+  expect.error(function() child.type_keys "<CR>" end)
+  expect_message("[tree.nvim]: Rename path already exists: " .. vim.fs.joinpath(vim.fn.getcwd(), "test_dir/dir_b"))
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", true)
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_b", true)
+end
 
 T["tree"]["plug remaps"]["TreeDelete"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeDelete"]["single file"] = function() end
