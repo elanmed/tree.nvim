@@ -631,9 +631,12 @@ T["tree"]["cursor placement"]["history-stack"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["history-stack"]["found"] = function() end
 T["tree"]["cursor placement"]["history-stack"]["not found"] = function() end
 
-T["tree"]["cursor placement"]["prev-dir-idx"] = MiniTest.new_set()
-T["tree"]["cursor placement"]["prev-dir-idx"]["found"] = function() end
-T["tree"]["cursor placement"]["prev-dir-idx"]["not found"] = function() end
+T["tree"]["cursor placement"]["prev-dir-idx"] = function()
+  child.type_keys "l"
+  expect_cursor_line(1, " 󰉋 dir_c")
+  child.type_keys "h"
+  expect_cursor_line(1, " 󰉋 dir_a")
+end
 
 T["tree"]["cursor placement"]["dest-path"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["dest-path"]["found"] = function() end
