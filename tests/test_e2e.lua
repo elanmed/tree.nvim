@@ -89,6 +89,12 @@ local T = MiniTest.new_set {
         vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = true })
         vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = true })
         vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = true })
+        vim.keymap.set("n", "yy", "<Plug>TreeCopy", { buffer = true })
+        vim.keymap.set("n", "m", "<Plug>TreeMove", { buffer = true })
+
+        vim.keymap.set("v", "d", "<Plug>TreeDelete", { buffer = true })
+        vim.keymap.set("v", "yy", "<Plug>TreeCopy", { buffer = true })
+        vim.keymap.set("v", "m", "<Plug>TreeMove", { buffer = true })
       ]]
     end,
     post_case = function()
@@ -181,19 +187,19 @@ T["tree"]["plug remaps"]["TreeYankRelativePath"] = function()
 end
 T["tree"]["plug remaps"]["TreeYankAbsolutePath"] = function()
   child.type_keys { "y", "a", }
-  eq(child.fn.getreg "a", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_a"))
+  eq(child.fn.getreg "a", vim.fs.abspath "test_dir/dir_a")
 
   child.type_keys "j"
   child.type_keys { "y", "a", }
-  eq(child.fn.getreg "a", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_b"))
+  eq(child.fn.getreg "a", vim.fs.abspath "test_dir/dir_b")
 end
 T["tree"]["plug remaps"]["TreeYankAbsolute"] = function()
   child.type_keys { "y", "d", }
-  eq(child.fn.getreg "d", vim.fs.joinpath(child.fn.getcwd(), "test_dir"))
+  eq(child.fn.getreg "d", vim.fs.abspath "test_dir")
 
   child.type_keys "j"
   child.type_keys { "y", "d", }
-  eq(child.fn.getreg "d", vim.fs.joinpath(child.fn.getcwd(), "test_dir"))
+  eq(child.fn.getreg "d", vim.fs.abspath "test_dir")
 end
 T["tree"]["plug remaps"]["TreeYankBasename"] = function()
   child.type_keys { "l", }
@@ -330,16 +336,52 @@ T["tree"]["plug remaps"]["TreeRename"]["destination exists"] = function()
   child.type_keys { "<C-u>", "test_dir/dir_b", }
   mock_confirm(1)
   expect.error(function() child.type_keys "<CR>" end)
-  expect_message("[tree.nvim]: Rename path already exists: " .. vim.fs.joinpath(vim.fn.getcwd(), "test_dir/dir_b"))
+  expect_message("[tree.nvim]: Rename path already exists: " .. vim.fs.abspath "test_dir/dir_b")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a", true)
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b", true)
 end
 
 T["tree"]["plug remaps"]["TreeDelete"] = MiniTest.new_set()
-T["tree"]["plug remaps"]["TreeDelete"]["single file"] = function() end
-T["tree"]["plug remaps"]["TreeDelete"]["directory"] = function() end
-T["tree"]["plug remaps"]["TreeDelete"]["abort confirmation"] = function() end
-T["tree"]["plug remaps"]["TreeDelete"]["visual mode"] = function() end
+T["tree"]["plug remaps"]["TreeDelete"]["single file"] = function()
+  child.type_keys { "l", "j", }
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
+  mock_confirm(1)
+  child.type_keys "dd"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua", false)
+  validate_confirm_args("Delete?\n" .. vim.fs.abspath "test_dir/dir_a/init.lua")
+end
+T["tree"]["plug remaps"]["TreeDelete"]["directory"] = function()
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a")
+  mock_confirm(1)
+  child.type_keys "dd"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", false)
+  validate_confirm_args("Delete?\n" .. vim.fs.abspath "test_dir/dir_a")
+end
+T["tree"]["plug remaps"]["TreeDelete"]["abort confirmation"] = function()
+  child.type_keys { "l", "j", }
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
+  mock_confirm(2)
+  child.type_keys "dd"
+  expect_message "[tree.nvim]: Aborting delete"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
+end
+T["tree"]["plug remaps"]["TreeDelete"]["visual mode"] = function()
+  child.type_keys "l"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/dir_c")
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
+  child.type_keys "V"
+  child.type_keys "j"
+  mock_confirm(1)
+  child.type_keys "d"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/dir_c", false)
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua", false)
+  validate_confirm_args(
+    "Delete?\n"
+    .. vim.fs.abspath "test_dir/dir_a/dir_c"
+    .. "\n"
+    .. vim.fs.abspath "test_dir/dir_a/init.lua"
+  )
+end
 
 T["tree"]["plug remaps"]["TreeCopy"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeCopy"]["single file"] = function() end
