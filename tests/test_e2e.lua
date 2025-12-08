@@ -1,7 +1,47 @@
 require "mini.test".setup()
 
 local expect = MiniTest.expect
+local eq = MiniTest.expect.equality
 local child = MiniTest.new_child_neovim()
+
+local root_path = vim.fs.abspath(vim.fs.joinpath(vim.fn.getcwd(), "test_dir"))
+
+local new_file_path = "new_file.txt"
+local new_dir_path = "new_dir/"
+local new_nested_file_path = "nested/path/file.lua"
+
+local new_file_path_full = vim.fs.joinpath(root_path, new_file_path)
+local new_dir_path_full = vim.fs.joinpath(root_path, new_dir_path)
+local new_nested_file_path_full = vim.fs.joinpath(root_path, new_nested_file_path)
+
+local new_paths = {
+  new_file_path_full,
+  new_dir_path_full,
+  new_nested_file_path_full,
+}
+
+--- @param path string
+local fs_exists = function(path)
+  return vim.uv.fs_stat(path) ~= nil
+end
+
+local validate_confirm_args = function(ref_msg_pattern)
+  local args = child.lua_get "_G.confirm_args"
+  eq(args[1], ref_msg_pattern)
+  if args[2] ~= nil then eq(args[2], "&Yes\n&No") end
+  if args[3] ~= nil then eq(args[3], 2) end
+end
+
+local mock_confirm = function(user_choice)
+  local lua_cmd = string.format(
+    [[vim.fn.confirm = function(...)
+        _G.confirm_args = { ... }
+        return %d
+      end]],
+    user_choice
+  )
+  child.lua(lua_cmd)
+end
 
 local T = MiniTest.new_set {
   hooks = {
@@ -28,6 +68,11 @@ local T = MiniTest.new_set {
         vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = true })
         vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = true })
       ]]
+    end,
+    post_case = function()
+      for _, path in ipairs(new_paths) do
+        child.fn.delete(path, "rf")
+      end
     end,
     post_once = child.stop,
   },
@@ -66,45 +111,58 @@ T["tree"]["plug remaps"]["TreeCloseTree"] = function()
 end
 T["tree"]["plug remaps"]["TreeYankRelativePath"] = function()
   child.type_keys { "y", "r", }
-  MiniTest.expect.equality(child.fn.getreg "r", "test_dir/dir_a")
+  eq(child.fn.getreg "r", "test_dir/dir_a")
 
   child.type_keys "j"
   child.type_keys { "y", "r", }
-  MiniTest.expect.equality(child.fn.getreg "r", "test_dir/dir_b")
+  eq(child.fn.getreg "r", "test_dir/dir_b")
 end
 T["tree"]["plug remaps"]["TreeYankAbsolutePath"] = function()
   child.type_keys { "y", "a", }
-  MiniTest.expect.equality(child.fn.getreg "a", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_a"))
+  eq(child.fn.getreg "a", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_a"))
 
   child.type_keys "j"
   child.type_keys { "y", "a", }
-  MiniTest.expect.equality(child.fn.getreg "a", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_b"))
+  eq(child.fn.getreg "a", vim.fs.joinpath(child.fn.getcwd(), "test_dir/dir_b"))
 end
 T["tree"]["plug remaps"]["TreeYankAbsolute"] = function()
   child.type_keys { "y", "d", }
-  MiniTest.expect.equality(child.fn.getreg "d", vim.fs.joinpath(child.fn.getcwd(), "test_dir"))
+  eq(child.fn.getreg "d", vim.fs.joinpath(child.fn.getcwd(), "test_dir"))
 
   child.type_keys "j"
   child.type_keys { "y", "d", }
-  MiniTest.expect.equality(child.fn.getreg "d", vim.fs.joinpath(child.fn.getcwd(), "test_dir"))
+  eq(child.fn.getreg "d", vim.fs.joinpath(child.fn.getcwd(), "test_dir"))
 end
 T["tree"]["plug remaps"]["TreeYankBasename"] = function()
   child.type_keys { "l", }
 
   child.type_keys { "y", "b", }
-  MiniTest.expect.equality(child.fn.getreg "b", "dir_c")
+  eq(child.fn.getreg "b", "dir_c")
 
   child.type_keys "j"
   child.type_keys { "y", "b", }
-  MiniTest.expect.equality(child.fn.getreg "b", "init")
+  eq(child.fn.getreg "b", "init")
 
   child.type_keys "j"
   child.type_keys { "y", "b", }
-  MiniTest.expect.equality(child.fn.getreg "b", "mod")
+  eq(child.fn.getreg "b", "mod")
 end
 
 T["tree"]["plug remaps"]["TreeCreate"] = MiniTest.new_set()
-T["tree"]["plug remaps"]["TreeCreate"]["file"] = function() end
+T["tree"]["plug remaps"]["TreeCreate"]["file"] = function()
+  child.type_keys "o"
+
+  local cmdline = child.fn.getcmdline()
+  eq(cmdline, "test_dir/")
+
+  child.type_keys(new_file_path)
+
+  mock_confirm(1)
+  child.type_keys "<CR>"
+
+  eq(fs_exists(new_file_path_full), true)
+  validate_confirm_args("Create? " .. new_file_path_full)
+end
 T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function() end
 T["tree"]["plug remaps"]["TreeCreate"]["children path"] = function() end
 T["tree"]["plug remaps"]["TreeCreate"]["parent path"] = function() end
