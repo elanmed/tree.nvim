@@ -532,14 +532,12 @@ tree = function(await_co, opts)
 
     local raw_create_path = vim.fn.input("Create: ", dirname)
     if raw_create_path == "" then
-      notify(vim.log.levels.INFO, "Aborting create")
       return
     end
     local create_path = vim.fs.normalize(vim.fs.abspath(raw_create_path))
 
     local option = vim.fn.confirm(("Create? %s"):format(create_path), "&Yes\n&No", 2)
     if option ~= 1 then
-      notify(vim.log.levels.INFO, "Aborting create")
       return
     end
 
@@ -605,7 +603,6 @@ tree = function(await_co, opts)
 
       local option = vim.fn.confirm(("Delete?\n%s"):format(abs_path_str), "&Yes\n&No", 2)
       if option ~= 1 then
-        notify(vim.log.levels.INFO, "Aborting delete")
         esc_to_normal()
         return
       end
@@ -631,14 +628,12 @@ tree = function(await_co, opts)
     if not line then return end
     local raw_rename_path = vim.fn.input("Rename to: ", line.rel_path)
     if raw_rename_path == "" then
-      notify(vim.log.levels.INFO, "Aborting rename")
       return
     end
     local rename_path = vim.fs.normalize(vim.fs.abspath(raw_rename_path))
 
     local option = vim.fn.confirm(("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
     if option ~= 1 then
-      notify(vim.log.levels.INFO, "Aborting rename")
       return
     end
 
@@ -667,7 +662,6 @@ tree = function(await_co, opts)
     local raw_copy_path = vim.fn.input(("%s to a directory: "):format(display_name))
 
     if raw_copy_path == "" then
-      notify(vim.log.levels.INFO, "Aborting %s", display_name:lower())
       esc_to_normal()
       return
     end
@@ -687,7 +681,6 @@ tree = function(await_co, opts)
         2
       )
       if option ~= 1 then
-        notify(vim.log.levels.INFO, "Aborting %s", display_name:lower())
         esc_to_normal()
         return
       end

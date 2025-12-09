@@ -275,21 +275,6 @@ T["tree"]["plug remaps"]["TreeCreate"]["parent path"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/new_file.txt")
   validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_file.txt")
 end
-T["tree"]["plug remaps"]["TreeCreate"]["abort empty"] = function()
-  child.type_keys "o"
-  eq(child.fn.getcmdline(), "test_dir/")
-  child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting create"
-end
-T["tree"]["plug remaps"]["TreeCreate"]["abort confirmation"] = function()
-  child.type_keys "o"
-  eq(child.fn.getcmdline(), "test_dir/")
-  child.type_keys "new_file.txt"
-  mock_confirm(2)
-  child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting create"
-  expect_fs_exists(vim.fs.abspath "test_dir/new_file.txt", false)
-end
 
 T["tree"]["plug remaps"]["TreeRename"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeRename"]["file"] = function()
@@ -337,7 +322,6 @@ T["tree"]["plug remaps"]["TreeRename"]["abort empty"] = function()
   eq(child.fn.getcmdline(), "test_dir/dir_a")
   child.type_keys "<C-u>"
   child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting rename"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a", true)
 end
 T["tree"]["plug remaps"]["TreeRename"]["abort confirmation"] = function()
@@ -346,7 +330,6 @@ T["tree"]["plug remaps"]["TreeRename"]["abort confirmation"] = function()
   child.type_keys { "<C-u>", "test_dir/renamed_dir", }
   mock_confirm(2)
   child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting rename"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a", true)
   expect_fs_exists(vim.fs.abspath "test_dir/renamed_dir", false)
 end
@@ -382,7 +365,6 @@ T["tree"]["plug remaps"]["TreeDelete"]["abort confirmation"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   mock_confirm(2)
   child.type_keys "dd"
-  expect_message "[tree.nvim]: Aborting delete"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
 end
 T["tree"]["plug remaps"]["TreeDelete"]["visual mode"] = function()
@@ -444,7 +426,6 @@ T["tree"]["plug remaps"]["TreeCopy"]["abort empty"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "yy"
   child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting copy"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
 end
 T["tree"]["plug remaps"]["TreeCopy"]["abort confirmation"] = function()
@@ -454,7 +435,6 @@ T["tree"]["plug remaps"]["TreeCopy"]["abort confirmation"] = function()
   child.type_keys "test_dir/dir_b"
   mock_confirm(2)
   child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting copy"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua", false)
 end
@@ -538,7 +518,6 @@ T["tree"]["plug remaps"]["TreeMove"]["abort empty"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "m"
   child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting move"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
 end
 T["tree"]["plug remaps"]["TreeMove"]["abort confirmation"] = function()
@@ -548,7 +527,6 @@ T["tree"]["plug remaps"]["TreeMove"]["abort confirmation"] = function()
   child.type_keys "test_dir/dir_b"
   mock_confirm(2)
   child.type_keys "<CR>"
-  expect_message "[tree.nvim]: Aborting move"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua", false)
 end
