@@ -37,7 +37,7 @@ local await_batched_co = function(opts)
   end
   step()
   if coroutine.status(opts.batch_co) == "suspended" then
-    coroutine.yield(opts.await_co)
+    coroutine.yield()
   end
 end
 
