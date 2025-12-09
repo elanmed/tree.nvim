@@ -23,16 +23,16 @@ end
 
 --- @class AwaitBatchedCoOpts
 --- @field batch_co thread
---- @field await_co thread
 --- @param opts AwaitBatchedCoOpts
 local await_batched_co = function(opts)
+  assert(coroutine.running() ~= nil, "await_batch should only be called from a coroutine")
   local step
   step = function()
     coroutine.resume(opts.batch_co)
     if coroutine.status(opts.batch_co) == "suspended" then
       vim.schedule(step)
     else
-      coroutine.resume(opts.await_co)
+      coroutine.resume(coroutine.running())
     end
   end
   step()
@@ -181,9 +181,8 @@ end
 --- @field _history? string[]
 
 local tree
---- @param await_co thread
 --- @param opts? TreeOpts
-tree = function(await_co, opts)
+tree = function(opts)
   opts = default(opts, {})
   opts = vim.deepcopy(opts)
 
@@ -306,7 +305,6 @@ tree = function(await_co, opts)
   end)
 
   await_batched_co {
-    await_co = await_co,
     batch_co = populate_lines_co,
   }
 
@@ -334,7 +332,6 @@ tree = function(await_co, opts)
     end
   end)
   await_batched_co {
-    await_co = await_co,
     batch_co = highlight_lines_co,
   }
 
@@ -422,8 +419,7 @@ tree = function(await_co, opts)
     r_opts = vim.deepcopy(r_opts)
     r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
 
-    local recurse_cb_co = coroutine.create(tree)
-    coroutine.resume(recurse_cb_co, recurse_cb_co, {
+    coroutine.resume(coroutine.create(tree), {
       tree_dir = r_opts.tree_dir,
       _cursor_pos_type = r_opts._cursor_pos_type,
       _dest_path = r_opts._dest_path,
@@ -788,8 +784,7 @@ end
 
 --- @param opts? TreeOpts
 M.tree = function(opts)
-  local await_co = coroutine.create(tree)
-  coroutine.resume(await_co, await_co, opts)
+  coroutine.resume(coroutine.create(tree), opts)
 end
 
 return M
