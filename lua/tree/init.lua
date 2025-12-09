@@ -17,6 +17,10 @@ local esc_to_normal = function()
   end
 end
 
+local clear_cmdline = function()
+  vim.cmd "normal! :<Esc>"
+end
+
 --- @class AwaitBatchedCoOpts
 --- @field batch_co thread
 --- @field await_co thread
@@ -532,6 +536,7 @@ tree = function(await_co, opts)
 
     local raw_create_path = vim.fn.input("Create: ", dirname)
     if raw_create_path == "" then
+      clear_cmdline()
       return
     end
     local create_path = vim.fs.normalize(vim.fs.abspath(raw_create_path))
@@ -628,6 +633,7 @@ tree = function(await_co, opts)
     if not line then return end
     local raw_rename_path = vim.fn.input("Rename to: ", line.rel_path)
     if raw_rename_path == "" then
+      clear_cmdline()
       return
     end
     local rename_path = vim.fs.normalize(vim.fs.abspath(raw_rename_path))
@@ -662,6 +668,7 @@ tree = function(await_co, opts)
     local raw_copy_path = vim.fn.input(("%s to a directory: "):format(display_name))
 
     if raw_copy_path == "" then
+      clear_cmdline()
       esc_to_normal()
       return
     end
