@@ -21,24 +21,68 @@ local clear_cmdline = function()
   vim.cmd "normal! :<Esc>"
 end
 
---- @class AwaitBatchedCoOpts
---- @field batch_co thread
---- @param opts AwaitBatchedCoOpts
-local await_batched_co = function(opts)
-  local running = coroutine.running()
-  assert(running ~= nil, "await_batch should only be called from a coroutine")
+local Batch = {}
+Batch.__index = Batch
+
+--- @generic IterState, IterVar
+--- @param iter fun(): fun(state: IterState, var: IterVar):IterVar, IterState, IterVar
+function Batch:new(iter)
+  local state = {
+    _iter = iter,
+  }
+
+  return setmetatable(state, Batch)
+end
+
+--- @param cb fun(val1: any, val2: any):nil
+--- @param on_complete fun():nil
+function Batch:each(cb, on_complete)
+  local batch_co = coroutine.create(function()
+    local idx = 1
+    for val1, val2 in self._iter() do
+      cb(val1, val2)
+      if idx % 50 == 0 then
+        coroutine.yield()
+      end
+      idx = idx + 1
+    end
+  end)
+
   local step
   step = function()
-    coroutine.resume(opts.batch_co)
-    if coroutine.status(opts.batch_co) == "suspended" then
+    coroutine.resume(batch_co)
+    if coroutine.status(batch_co) == "suspended" then
       vim.schedule(step)
-    else
-      coroutine.resume(running)
+    elseif coroutine.status(batch_co) == "dead" then
+      on_complete()
     end
   end
   step()
-  if coroutine.status(opts.batch_co) == "suspended" then
+end
+
+--- @param promise fun(resolve: fun():nil):nil
+local await = function(promise)
+  local thread = coroutine.running()
+  assert(thread ~= nil, "`await` can only be called in a coroutine")
+  local resumed = false
+  -- TODO: ideally would be able to wrap the promise in a vim.schedule to ensure
+  -- that resumed is always true, but causes test issues
+  promise(function()
+    if coroutine.status(thread) == "suspended" then
+      coroutine.resume(thread)
+      resumed = true
+    end
+  end)
+  if resumed then
     coroutine.yield()
+  end
+end
+
+--- @param fn fun():nil
+local async = function(fn)
+  return function(...)
+    local ok, err = coroutine.resume(coroutine.create(fn), ...)
+    if not ok then error(err) end
   end
 end
 
@@ -181,9 +225,9 @@ end
 --- @field _cursor_pos_type? TreeCursorPosType
 --- @field _history? string[]
 
-local tree
+local open
 --- @param opts? TreeOpts
-tree = function(opts)
+open = function(opts)
   opts = default(opts, {})
   opts = vim.deepcopy(opts)
 
@@ -257,84 +301,71 @@ tree = function(opts)
   local history_line = nil
   local top_history = opts._history[#opts._history]
 
-  local populate_lines_co = coroutine.create(function()
-    local idx = 1
-    for name, type in vim.fs.dir(opts.tree_dir) do
-      if idx % 50 == 0 then
-        coroutine.yield()
-      end
-      name = type == "directory" and name .. "/" or name
+  local populate_lines = function(name, type)
+    name = type == "directory" and name .. "/" or name
 
-      local rel_path = vim.fs.normalize(name)
-      local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, rel_path))
-      local basename = vim.fs.basename(abs_path)
+    local rel_path = vim.fs.normalize(name)
+    local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, rel_path))
+    local basename = vim.fs.basename(abs_path)
 
-      local icon_type = type == "directory" and "directory" or "file"
-      local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type, }
-      local formatted = " " .. icon_info.icon_char .. basename
-      max_line_width = math.max(max_line_width, #formatted)
+    local icon_type = type == "directory" and "directory" or "file"
+    local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type, }
+    local formatted = " " .. icon_info.icon_char .. basename
+    max_line_width = math.max(max_line_width, #formatted)
 
-      --- @type Line
-      local line = {
-        abs_path = abs_path,
-        rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path),
-        formatted = formatted,
-        icon_char = icon_info.icon_char,
-        icon_hl = icon_info.icon_hl,
-      }
-      table.insert(lines, line)
-      table.insert(formatted_lines, formatted)
+    --- @type Line
+    local line = {
+      abs_path = abs_path,
+      rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path),
+      formatted = formatted,
+      icon_char = icon_info.icon_char,
+      icon_hl = icon_info.icon_hl,
+    }
+    table.insert(lines, line)
+    table.insert(formatted_lines, formatted)
 
-      if abs_path == top_history then
-        history_line = #lines
-      end
-
-      if abs_path == curr_bufname_abs_path then
-        curr_bufname_idx = #lines
-      end
-
-      if abs_path == vim.fs.dirname(opts._prev_path) then
-        prev_dir_idx = #lines
-      end
-
-      if abs_path == opts._dest_path then
-        dest_path_idx = #lines
-      end
-
-      idx = idx + 1
+    if abs_path == top_history then
+      history_line = #lines
     end
-  end)
 
-  await_batched_co {
-    batch_co = populate_lines_co,
-  }
+    if abs_path == curr_bufname_abs_path then
+      curr_bufname_idx = #lines
+    end
+
+    if abs_path == vim.fs.dirname(opts._prev_path) then
+      prev_dir_idx = #lines
+    end
+
+    if abs_path == opts._dest_path then
+      dest_path_idx = #lines
+    end
+  end
+
+  await(function(resolve)
+    Batch:new(function() return vim.fs.dir(opts.tree_dir) end):each(populate_lines, resolve)
+  end)
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
   vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr, })
 
-  local highlight_lines_co = coroutine.create(function()
-    for idx, line in ipairs(lines) do
-      if idx % 50 == 0 then
-        coroutine.yield()
-      end
+  local highlight_lines = function(idx, line)
+    local leading_space = 1
+    local icon_hl_col_0_indexed = leading_space
+    local row_1_indexed = idx
+    local row_0_indexed = row_1_indexed - 1
+    vim.hl.range(
+      opts._tree_bufnr,
+      ns_id,
+      line.icon_hl,
+      { row_0_indexed, icon_hl_col_0_indexed, },
+      { row_0_indexed, icon_hl_col_0_indexed + 1, }
+    )
+  end
 
-      local leading_space = 1
-      local icon_hl_col_0_indexed = leading_space
-      local row_1_indexed = idx
-      local row_0_indexed = row_1_indexed - 1
-      vim.hl.range(
-        opts._tree_bufnr,
-        ns_id,
-        line.icon_hl,
-        { row_0_indexed, icon_hl_col_0_indexed, },
-        { row_0_indexed, icon_hl_col_0_indexed + 1, }
-      )
-    end
+  await(function(resolve)
+    Batch:new(function() return ipairs(lines) end):each(highlight_lines, resolve)
   end)
-  await_batched_co {
-    batch_co = highlight_lines_co,
-  }
 
   local width_padding = 10
 
@@ -420,7 +451,7 @@ tree = function(opts)
     r_opts = vim.deepcopy(r_opts)
     r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
 
-    coroutine.resume(coroutine.create(tree), {
+    async(open) {
       tree_dir = r_opts.tree_dir,
       _cursor_pos_type = r_opts._cursor_pos_type,
       _dest_path = r_opts._dest_path,
@@ -438,7 +469,7 @@ tree = function(opts)
       _curr_bufnr = opts._curr_bufnr,
       _history = opts._history,
       _prev_idx = vim.fn.line ".",
-    })
+    }
   end
 
   local out_dir = function()
@@ -785,7 +816,7 @@ end
 
 --- @param opts? TreeOpts
 M.tree = function(opts)
-  coroutine.resume(coroutine.create(tree), opts)
+  async(open)(opts)
 end
 
 return M
