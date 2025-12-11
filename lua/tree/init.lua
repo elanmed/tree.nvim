@@ -25,14 +25,15 @@ end
 --- @field batch_co thread
 --- @param opts AwaitBatchedCoOpts
 local await_batched_co = function(opts)
-  assert(coroutine.running() ~= nil, "await_batch should only be called from a coroutine")
+  local running = coroutine.running()
+  assert(running ~= nil, "await_batch should only be called from a coroutine")
   local step
   step = function()
     coroutine.resume(opts.batch_co)
     if coroutine.status(opts.batch_co) == "suspended" then
       vim.schedule(step)
     else
-      coroutine.resume(coroutine.running())
+      coroutine.resume(running)
     end
   end
   step()
