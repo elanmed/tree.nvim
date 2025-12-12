@@ -94,13 +94,13 @@ local notify = function(level, msg, ...)
   vim.notify(msg:format(...), level)
 end
 
---- @generic T
---- @param val T | nil
---- @param default_val T
---- @return T
-local default = function(val, default_val)
+--- @generic T, U
+--- @param val T|nil
+--- @param fallback U
+--- @return T|U
+local if_nil = function(val, fallback)
   if val == nil then
-    return default_val
+    return fallback
   end
   return val
 end
@@ -228,14 +228,14 @@ end
 local open
 --- @param opts? TreeOpts
 open = function(opts)
-  opts = default(opts, {})
+  opts = if_nil(opts, {})
   opts = vim.deepcopy(opts)
 
-  opts.icons_enabled = default(opts.icons_enabled, true)
-  opts.tree_win_opts = default(opts.tree_win_opts, {})
-  opts.tree_win_config = default(opts.tree_win_config, {})
-  opts._history = default(opts._history, {})
-  opts._cursor_pos_type = default(opts._cursor_pos_type, "curr-bufname")
+  opts.icons_enabled = if_nil(opts.icons_enabled, true)
+  opts.tree_win_opts = if_nil(opts.tree_win_opts, {})
+  opts.tree_win_config = if_nil(opts.tree_win_config, {})
+  opts._history = if_nil(opts._history, {})
+  opts._cursor_pos_type = if_nil(opts._cursor_pos_type, "curr-bufname")
 
   opts._curr_winnr = (function()
     if opts._curr_winnr then
@@ -264,7 +264,7 @@ open = function(opts)
     end
     return dir
   end)()
-  opts.tree_dir = default(opts.tree_dir, curr_dir)
+  opts.tree_dir = if_nil(opts.tree_dir, curr_dir)
   opts.tree_dir = vim.fs.normalize(vim.fs.abspath(opts.tree_dir))
 
   opts._tree_bufnr = (function()
@@ -449,7 +449,7 @@ open = function(opts)
   --- @param r_opts RecurseOpts
   local recurse = function(r_opts)
     r_opts = vim.deepcopy(r_opts)
-    r_opts.tree_dir = default(r_opts.tree_dir, opts.tree_dir)
+    r_opts.tree_dir = if_nil(r_opts.tree_dir, opts.tree_dir)
 
     async(open) {
       tree_dir = r_opts.tree_dir,
