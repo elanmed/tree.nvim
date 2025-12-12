@@ -24,8 +24,8 @@ end
 local Batch = {}
 Batch.__index = Batch
 
---- @generic IterState, IterVar
---- @param iter fun(): fun(state: IterState, var: IterVar):IterVar, IterState, IterVar
+--- @generic State, Var, Ret1, Ret2
+--- @param iter fun(): ((fun(State, Var): (Ret1, Ret2)), State?, Var?)
 function Batch:new(iter)
   local state = {
     _iter = iter,
