@@ -203,12 +203,6 @@ end
 --- @field icon_char string
 --- @field icon_hl string
 
---- @class TreeJson
---- @field type "file"|"directory"
---- @field name string
---- @field contents TreeJson[]
---- @field target string
-
 --- @alias TreeCursorPosType "curr-bufname"|"prev-idx"|"history-stack"|"prev-dir-idx"|"dest-path"
 
 --- @class TreeOpts
