@@ -64,15 +64,15 @@ end
 local await = function(promise)
   local thread = coroutine.running()
   assert(thread ~= nil, "`await` can only be called in a coroutine")
-  local resolved_before_yielded = false
+  local resolved = false
   -- TODO: A simpler alternative would be wrap `promise` in a `vim.schedule` to ensure
   -- that `yield` is always called before the callback in `promise` runs, but this
   -- has been tricky for tests
   promise(function()
-    resolved_before_yielded = true
+    resolved = true
     if coroutine.status(thread) == "suspended" then coroutine.resume(thread) end
   end)
-  if not resolved_before_yielded then
+  if not resolved then
     coroutine.yield()
   end
 end
