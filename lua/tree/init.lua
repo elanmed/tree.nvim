@@ -704,7 +704,7 @@ open = function(opts)
       local abs_path_str = table.concat(abs_path_tbl, "\n")
 
       local option = vim.fn.confirm(
-        ("%s\nFiles:\n%s\nTo:\n%s"):format(display_name, abs_path_str, copy_path),
+        ("%s files:\n%s\nTo:\n%s"):format(display_name, abs_path_str, copy_path),
         "&Yes\n&No",
         2
       )

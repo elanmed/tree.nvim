@@ -393,7 +393,7 @@ T["tree"]["plug remaps"]["TreeCopy"]["single file"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua")
   validate_confirm_args(
-    "Copy\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
+    "Copy files:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
   )
 end
 T["tree"]["plug remaps"]["TreeCopy"]["directory"] = function()
@@ -405,7 +405,7 @@ T["tree"]["plug remaps"]["TreeCopy"]["directory"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/dir_a")
   validate_confirm_args(
-    "Copy\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
+    "Copy files:\n" .. vim.fs.abspath "test_dir/dir_a" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
   )
 end
 T["tree"]["plug remaps"]["TreeCopy"]["to parent path"] = function()
@@ -418,7 +418,7 @@ T["tree"]["plug remaps"]["TreeCopy"]["to parent path"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   expect_fs_exists(vim.fs.abspath "test_dir/init.lua")
   validate_confirm_args(
-    "Copy\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir"
+    "Copy files:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir"
   )
 end
 T["tree"]["plug remaps"]["TreeCopy"]["abort empty"] = function()
@@ -453,7 +453,7 @@ T["tree"]["plug remaps"]["TreeCopy"]["visual mode"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/dir_c")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua")
   validate_confirm_args(
-    "Copy\nFiles:\n"
+    "Copy files:\n"
     .. vim.fs.abspath "test_dir/dir_a/dir_c"
     .. "\n"
     .. vim.fs.abspath "test_dir/dir_a/init.lua"
@@ -485,7 +485,7 @@ T["tree"]["plug remaps"]["TreeMove"]["single file"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua", false)
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua")
   validate_confirm_args(
-    "Move\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
+    "Move files:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
   )
 end
 T["tree"]["plug remaps"]["TreeMove"]["directory"] = function()
@@ -497,7 +497,7 @@ T["tree"]["plug remaps"]["TreeMove"]["directory"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a", false)
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/dir_a")
   validate_confirm_args(
-    "Move\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
+    "Move files:\n" .. vim.fs.abspath "test_dir/dir_a" .. "\nTo:\n" .. vim.fs.abspath "test_dir/dir_b"
   )
 end
 T["tree"]["plug remaps"]["TreeMove"]["to parent path"] = function()
@@ -510,7 +510,7 @@ T["tree"]["plug remaps"]["TreeMove"]["to parent path"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua", false)
   expect_fs_exists(vim.fs.abspath "test_dir/init.lua")
   validate_confirm_args(
-    "Move\nFiles:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir"
+    "Move files:\n" .. vim.fs.abspath "test_dir/dir_a/init.lua" .. "\nTo:\n" .. vim.fs.abspath "test_dir"
   )
 end
 T["tree"]["plug remaps"]["TreeMove"]["abort empty"] = function()
@@ -545,7 +545,7 @@ T["tree"]["plug remaps"]["TreeMove"]["visual mode"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/dir_c")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua")
   validate_confirm_args(
-    "Move\nFiles:\n"
+    "Move files:\n"
     .. vim.fs.abspath "test_dir/dir_a/dir_c"
     .. "\n"
     .. vim.fs.abspath "test_dir/dir_a/init.lua"
