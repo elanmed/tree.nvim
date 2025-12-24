@@ -510,14 +510,14 @@ open = function(opts)
     local line = lines[vim.fn.line "."]
     if not line then return end
     vim.fn.setreg("a", line.abs_path)
-    notify(vim.log.levels.INFO, "absolute path yanked: %s", line.abs_path)
+    notify(vim.log.levels.INFO, "Absolute path yanked: %s", line.abs_path)
   end
 
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
     vim.fn.setreg("r", line.rel_path)
-    notify(vim.log.levels.INFO, "relative path yanked: %s", line.rel_path)
+    notify(vim.log.levels.INFO, "Relative path yanked: %s", line.rel_path)
   end
 
   local yank_dir = function()
@@ -525,7 +525,7 @@ open = function(opts)
     if not line then return end
     local dirname = vim.fs.dirname(line.abs_path)
     vim.fn.setreg("d", dirname)
-    notify(vim.log.levels.INFO, "dirname yanked: %s", dirname)
+    notify(vim.log.levels.INFO, "Dirname yanked: %s", dirname)
   end
 
   local yank_basename = function()
@@ -539,12 +539,12 @@ open = function(opts)
     end)()
 
     vim.fn.setreg("b", basename)
-    notify(vim.log.levels.INFO, "basename yanked: %s", basename)
+    notify(vim.log.levels.INFO, "Basename yanked: %s", basename)
   end
 
   local refresh = function()
     recurse { _cursor_pos_type = "prev-idx", }
-    notify(vim.log.levels.INFO, "refreshed")
+    notify(vim.log.levels.INFO, "Refreshed")
   end
 
   local create = function()
