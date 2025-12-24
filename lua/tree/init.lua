@@ -714,9 +714,9 @@ open = function(opts)
         return
       end
 
-      local mkdir_success = vim.fn.mkdir(copy_path, "p")
+      local mkdir_success = vim.fn.mkdir(vim.fs.dirname(copy_path), "p")
       if mkdir_success == vimscript_false then
-        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", copy_path)
+        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", vim.fs.dirname(copy_path))
         esc_to_normal()
         return
       end
