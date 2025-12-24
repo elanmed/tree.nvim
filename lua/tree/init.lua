@@ -544,6 +544,7 @@ open = function(opts)
 
   local refresh = function()
     recurse { _cursor_pos_type = "prev-idx", }
+    notify(vim.log.levels.INFO, "refreshed")
   end
 
   local create = function()
