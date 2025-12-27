@@ -18,7 +18,7 @@ local esc_to_normal = function()
 end
 
 local clear_cmdline = function()
-  vim.cmd "normal! :<Esc>"
+  if vim.fn.mode() == "n" then vim.cmd [[normal! :<Esc>]] end
 end
 
 local Batch = {}
