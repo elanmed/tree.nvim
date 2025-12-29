@@ -612,7 +612,7 @@ open = function(opts)
         _dest_path = normalize_dest_path { path = create_path, tree_dir = opts.tree_dir, },
       }
     end)
-    vim.cmd "doautocmd User TreeCreate"
+    vim.api.nvim_exec_autocmds("User", { pattern = "TreeCreate", })
 
     vim.api.nvim_win_call(opts._curr_winnr, function()
       vim.cmd.edit(create_path)
@@ -641,7 +641,7 @@ open = function(opts)
         end
       end
 
-      vim.cmd "doautocmd User TreeDelete"
+      vim.api.nvim_exec_autocmds("User", { pattern = "TreeDelete", })
       esc_to_normal()
       vim.schedule(function() recurse { _cursor_pos_type = "prev-idx", } end)
     end
@@ -681,7 +681,7 @@ open = function(opts)
         _dest_path = rename_path,
       }
     end)
-    vim.cmd "doautocmd User TreeRename"
+    vim.api.nvim_exec_autocmds("User", { pattern = "TreeRename", })
   end
 
   --- @param should_delete boolean
@@ -753,9 +753,9 @@ open = function(opts)
       end
 
       if should_delete then
-        vim.cmd "doautocmd User TreeMove"
+        vim.api.nvim_exec_autocmds("User", { pattern = "TreeMove", })
       else
-        vim.cmd "doautocmd User TreeCopy"
+        vim.api.nvim_exec_autocmds("User", { pattern = "TreeCopy", })
       end
       esc_to_normal()
       vim.schedule(function()
