@@ -664,7 +664,7 @@ open = function(opts)
       clear_cmdline()
       return
     end
-    local rename_path = vim.fs.normalize(raw_rename_path)
+    local rename_path = vim.fs.normalize(vim.fs.abspath(raw_rename_path))
 
     local option = vim.fn.confirm(("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
     if option ~= 1 then
