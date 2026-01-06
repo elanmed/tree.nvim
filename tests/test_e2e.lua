@@ -239,7 +239,7 @@ end
 T["tree"]["plug remaps"]["TreeCreate"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeCreate"]["file"] = function()
   child.type_keys "o"
-  eq(child.fn.getcmdline(), "test_dir/")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/")
   child.type_keys "new_file.txt"
   mock_confirm(1)
   child.type_keys "<CR>"
@@ -248,7 +248,7 @@ T["tree"]["plug remaps"]["TreeCreate"]["file"] = function()
 end
 T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function()
   child.type_keys "o"
-  eq(child.fn.getcmdline(), "test_dir/")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/")
   child.type_keys "new_dir/"
   mock_confirm(1)
   child.type_keys "<CR>"
@@ -257,7 +257,7 @@ T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function()
 end
 T["tree"]["plug remaps"]["TreeCreate"]["children path"] = function()
   child.type_keys "o"
-  eq(child.fn.getcmdline(), "test_dir/")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/")
   child.type_keys "new_nested/path/file.lua"
   mock_confirm(1)
   child.type_keys "<CR>"
@@ -267,7 +267,7 @@ end
 T["tree"]["plug remaps"]["TreeCreate"]["parent path"] = function()
   child.type_keys "l"
   child.type_keys "o"
-  eq(child.fn.getcmdline(), "test_dir/dir_a/")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/")
   child.type_keys "../"
   child.type_keys "new_file.txt"
   mock_confirm(1)
@@ -280,8 +280,7 @@ T["tree"]["plug remaps"]["TreeRename"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeRename"]["file"] = function()
   child.type_keys { "l", "j", }
   child.type_keys "r"
-  local original_path = child.fn.getcmdline()
-  eq(original_path, "test_dir/dir_a/init.lua")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys { "<C-u>", "test_dir/dir_a/renamed.lua", }
   mock_confirm(1)
   child.type_keys "<CR>"
@@ -290,8 +289,7 @@ T["tree"]["plug remaps"]["TreeRename"]["file"] = function()
 end
 T["tree"]["plug remaps"]["TreeRename"]["directory"] = function()
   child.type_keys "r"
-  local original_path = child.fn.getcmdline()
-  eq(original_path, "test_dir/dir_a")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a")
   child.type_keys { "<C-u>", "test_dir/renamed_dir", }
   mock_confirm(1)
   child.type_keys "<CR>"
@@ -301,7 +299,7 @@ end
 T["tree"]["plug remaps"]["TreeRename"]["to parent path"] = function()
   child.type_keys { "l", "j", }
   child.type_keys "r"
-  eq(child.fn.getcmdline(), "test_dir/dir_a/init.lua")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys { "<C-u>", "test_dir/renamed.lua", }
   mock_confirm(1)
   child.type_keys "<CR>"
@@ -310,7 +308,7 @@ T["tree"]["plug remaps"]["TreeRename"]["to parent path"] = function()
 end
 T["tree"]["plug remaps"]["TreeRename"]["to child path"] = function()
   child.type_keys "r"
-  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a")
   child.type_keys { "<C-u>", "test_dir/dir_b/renamed_dir", }
   mock_confirm(1)
   child.type_keys "<CR>"
@@ -319,14 +317,14 @@ T["tree"]["plug remaps"]["TreeRename"]["to child path"] = function()
 end
 T["tree"]["plug remaps"]["TreeRename"]["abort empty"] = function()
   child.type_keys "r"
-  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a")
   child.type_keys "<C-u>"
   child.type_keys "<CR>"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a", true)
 end
 T["tree"]["plug remaps"]["TreeRename"]["abort confirmation"] = function()
   child.type_keys "r"
-  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a")
   child.type_keys { "<C-u>", "test_dir/renamed_dir", }
   mock_confirm(2)
   child.type_keys "<CR>"
@@ -335,7 +333,7 @@ T["tree"]["plug remaps"]["TreeRename"]["abort confirmation"] = function()
 end
 T["tree"]["plug remaps"]["TreeRename"]["destination exists"] = function()
   child.type_keys "r"
-  eq(child.fn.getcmdline(), "test_dir/dir_a")
+  eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a")
   child.type_keys { "<C-u>", "test_dir/dir_b", }
   mock_confirm(1)
   expect.error(function() child.type_keys "<CR>" end)

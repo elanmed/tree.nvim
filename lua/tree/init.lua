@@ -197,7 +197,6 @@ end
 
 --- @class Line
 --- @field abs_path string
---- @field rel_path string
 --- @field formatted string
 --- @field icon_char string
 --- @field icon_hl string
@@ -297,8 +296,7 @@ open = function(opts)
   local populate_lines = function(name, type)
     name = type == "directory" and name .. "/" or name
 
-    local rel_path = vim.fs.normalize(name)
-    local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, rel_path))
+    local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, vim.fs.normalize(name)))
     local basename = vim.fs.basename(abs_path)
 
     local icon_type = type == "directory" and "directory" or "file"
@@ -309,7 +307,6 @@ open = function(opts)
     --- @type Line
     local line = {
       abs_path = abs_path,
-      rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path),
       formatted = formatted,
       icon_char = icon_info.icon_char,
       icon_hl = icon_info.icon_hl,
@@ -516,8 +513,18 @@ open = function(opts)
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    vim.fn.setreg("r", line.rel_path)
-    notify(vim.log.levels.INFO, "Relative path yanked: %s", line.rel_path)
+    local rel_path = vim.fs.relpath(vim.fn.getcwd(), line.abs_path)
+    if rel_path == nil then
+      notify(
+        vim.log.levels.INFO,
+        "No relative path, %s is a parent of the cwd: %s",
+        line.abs_path,
+        vim.fn.getcwd()
+      )
+      return
+    end
+    vim.fn.setreg("r", rel_path)
+    notify(vim.log.levels.INFO, "Relative path yanked: %s", rel_path)
   end
 
   local yank_dir = function()
@@ -553,8 +560,7 @@ open = function(opts)
       if line then return vim.fs.dirname(line.abs_path) end
       return opts.tree_dir
     end)()
-    local rel_path = vim.fs.relpath(vim.fn.getcwd(), abs_path)
-    local dirname = vim.fs.joinpath(rel_path, "/")
+    local dirname = vim.fs.joinpath(abs_path, "/")
 
     local raw_create_path = vim.fn.input("Create: ", dirname)
     if raw_create_path == "" then
@@ -653,12 +659,12 @@ open = function(opts)
   local rename = function()
     local line = lines[vim.fn.line "."]
     if not line then return end
-    local raw_rename_path = vim.fn.input("Rename to: ", line.rel_path)
+    local raw_rename_path = vim.fn.input("Rename to: ", line.abs_path)
     if raw_rename_path == "" then
       clear_cmdline()
       return
     end
-    local rename_path = vim.fs.normalize(vim.fs.abspath(raw_rename_path))
+    local rename_path = vim.fs.normalize(raw_rename_path)
 
     local option = vim.fn.confirm(("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
     if option ~= 1 then
