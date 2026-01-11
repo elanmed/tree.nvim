@@ -21,43 +21,54 @@ local clear_cmdline = function()
   vim.cmd "normal! :<Esc>"
 end
 
-local Batch = {}
-Batch.__index = Batch
-
---- @generic State, Var, Ret1, Ret2
---- @param iter fun(): ((fun(State, Var): (Ret1, Ret2)), State?, Var?)
-function Batch:new(iter)
-  local state = {
-    _iter = iter,
-  }
-
-  return setmetatable(state, Batch)
+local function safe_resume(...)
+  local ok, err = coroutine.resume(...)
+  if not ok then
+    error(err)
+  end
 end
 
---- @param cb fun(val1: any, val2: any):nil
---- @param on_complete fun():nil
-function Batch:each(cb, on_complete)
-  local batch_co = coroutine.create(function()
-    local idx = 1
-    for val1, val2 in self._iter() do
-      cb(val1, val2)
-      if idx % 50 == 0 then
-        coroutine.yield()
-      end
-      idx = idx + 1
-    end
-  end)
+--- @generic InvariantState, ControlVar
+--- @param iterator_factory fun(): ((fun(invariant_state: InvariantState, control_var: ControlVar):ControlVar), InvariantState?, ControlVar?)
+--- @param on_iteration fun(entry: ControlVar):nil
+local function throttled_iterator(iterator_factory, on_iteration)
+  return function(resolve)
+    local threshold_ns = 10 * 1000000
 
-  local step
-  step = function()
-    coroutine.resume(batch_co)
-    if coroutine.status(batch_co) == "suspended" then
-      vim.schedule(step)
-    elseif coroutine.status(batch_co) == "dead" then
-      on_complete()
+    local function create_throttle()
+      local last_yield = vim.uv.hrtime()
+      return function()
+        local now = vim.uv.hrtime()
+        if (now - last_yield) >= threshold_ns then
+          last_yield = now
+          local thread = coroutine.running()
+          vim.schedule(function() safe_resume(thread) end)
+          coroutine.yield()
+        end
+      end
     end
+
+    local function process()
+      local maybe_pause = create_throttle()
+
+      local iter_fn, invariant_state, control_var = iterator_factory()
+      while true do
+        maybe_pause()
+
+        local values = { iter_fn(invariant_state, control_var), }
+        control_var = values[1]
+
+        if control_var == nil then
+          resolve()
+          return
+        end
+
+        on_iteration(unpack(values))
+      end
+    end
+
+    safe_resume(coroutine.create(process))
   end
-  step()
 end
 
 --- @param promise fun(resolve: fun():nil):nil
@@ -77,11 +88,10 @@ local await = function(promise)
   end
 end
 
---- @param fn fun():nil
+--- @param fn fun(...):nil
 local async = function(fn)
   return function(...)
-    local ok, err = coroutine.resume(coroutine.create(fn), ...)
-    if not ok then error(err) end
+    safe_resume(coroutine.create(fn), ...)
   end
 end
 
@@ -334,9 +344,10 @@ open = function(opts)
     end
   end
 
-  await(function(resolve)
-    Batch:new(function() return vim.fs.dir(opts.tree_dir) end):each(populate_lines, resolve)
-  end)
+  await(throttled_iterator(
+    function() return vim.fs.dir(opts.tree_dir) end,
+    populate_lines
+  ))
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
@@ -356,9 +367,10 @@ open = function(opts)
     )
   end
 
-  await(function(resolve)
-    Batch:new(function() return ipairs(lines) end):each(highlight_lines, resolve)
-  end)
+  await(throttled_iterator(
+    function() return ipairs(lines) end,
+    highlight_lines
+  ))
 
   local width_padding = 10
 
