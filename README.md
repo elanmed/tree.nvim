@@ -2,6 +2,8 @@
 
 A simple file tree built with the `vim.fs.*` utilities
 
+![demo](https://elanmed.dev/nvim-plugins/tree.png)
+
 ## Features
 
 - 1 source file (800 LOC), 1 test file
