@@ -705,7 +705,10 @@ open = function(opts)
   --- @param should_delete boolean
   local copy_and_maybe_delete = function(should_delete)
     local display_name = should_delete and "Move" or "Copy"
-    local raw_copy_path = vim.fn.input(("%s to a directory: "):format(display_name))
+    local line = lines[vim.fn.line "."]
+    local dirname = vim.fs.joinpath(vim.fs.dirname(line.abs_path), "/")
+
+    local raw_copy_path = vim.fn.input(("%s to: "):format(display_name), dirname)
 
     if raw_copy_path == "" then
       clear_cmdline()
