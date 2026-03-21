@@ -85,6 +85,11 @@ local mock_confirm = function(user_choice)
   child.lua(lua_cmd)
 end
 
+-- wait for pending vim.schedule callbacks to complete in the child process.
+local flush = function()
+  child.lua "vim.wait(1)"
+end
+
 local T = MiniTest.new_set {
   hooks = {
     pre_case = function()
@@ -97,6 +102,9 @@ local T = MiniTest.new_set {
         M.tree {
           tree_dir = "./test_dir",
         }
+        -- wait for the async open() to complete before setting buffer-local
+        -- keymaps, so they land on the tree buffer (not the initial scratch buf).
+        vim.wait(1)
         vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = true })
         vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = true })
         vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = true })
@@ -143,38 +151,40 @@ T["tree"]["plug remaps"]["TreeInDir"] = function()
     " 󰉋 dir_a",
     " 󰉋 dir_b",
   }
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_lines {
     " 󰉋 dir_c",
     "  init.lua",
     " 󰛦 mod.ts",
   }
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_lines {
     " 󰌝 index.html",
     " 󰌞 index.js",
   }
 end
 T["tree"]["plug remaps"]["TreeOutDir"] = function()
-  child.type_keys { "l", "l", }
+  child.type_keys(20, "l")
+  child.type_keys(20, "l")
   expect_lines {
     " 󰌝 index.html",
     " 󰌞 index.js",
   }
-  child.type_keys "h"
+  child.type_keys(20, "h")
   expect_lines {
     " 󰉋 dir_c",
     "  init.lua",
     " 󰛦 mod.ts",
   }
-  child.type_keys "h"
+  child.type_keys(20, "h")
   expect_lines {
     " 󰉋 dir_a",
     " 󰉋 dir_b",
   }
 end
 T["tree"]["plug remaps"]["TreeSelect"] = function()
-  child.type_keys { "l", "l", }
+  child.type_keys(20, "l")
+  child.type_keys(20, "l")
   expect_lines {
     " 󰌝 index.html",
     " 󰌞 index.js",
@@ -222,7 +232,7 @@ T["tree"]["plug remaps"]["TreeYankAbsolute"] = function()
   eq(child.fn.getreg "d", vim.fs.abspath "test_dir")
 end
 T["tree"]["plug remaps"]["TreeYankBasename"] = function()
-  child.type_keys { "l", }
+  child.type_keys(20, "l")
 
   child.type_keys { "y", "b", }
   eq(child.fn.getreg "b", "dir_c")
@@ -265,7 +275,7 @@ T["tree"]["plug remaps"]["TreeCreate"]["children path"] = function()
   validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_nested/path/file.lua")
 end
 T["tree"]["plug remaps"]["TreeCreate"]["parent path"] = function()
-  child.type_keys "l"
+  child.type_keys(20, "l")
   child.type_keys "o"
   eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/")
   child.type_keys "../"
@@ -278,7 +288,8 @@ end
 
 T["tree"]["plug remaps"]["TreeRename"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeRename"]["file"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   child.type_keys "r"
   eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys { "<C-u>", "test_dir/dir_a/renamed.lua", }
@@ -297,7 +308,8 @@ T["tree"]["plug remaps"]["TreeRename"]["directory"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a", false)
 end
 T["tree"]["plug remaps"]["TreeRename"]["to parent path"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   child.type_keys "r"
   eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys { "<C-u>", "test_dir/renamed.lua", }
@@ -344,7 +356,8 @@ end
 
 T["tree"]["plug remaps"]["TreeDelete"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeDelete"]["single file"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   mock_confirm(1)
   child.type_keys "dd"
@@ -359,14 +372,15 @@ T["tree"]["plug remaps"]["TreeDelete"]["directory"] = function()
   validate_confirm_args("Delete?\n" .. vim.fs.abspath "test_dir/dir_a")
 end
 T["tree"]["plug remaps"]["TreeDelete"]["abort confirmation"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   mock_confirm(2)
   child.type_keys "dd"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
 end
 T["tree"]["plug remaps"]["TreeDelete"]["visual mode"] = function()
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/dir_c")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "V"
@@ -382,13 +396,15 @@ end
 
 T["tree"]["plug remaps"]["TreeCopy"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeCopy"]["prepopulates dirname"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   child.type_keys "yy"
   eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/")
   child.type_keys { "<C-u>", "<CR>", }
 end
 T["tree"]["plug remaps"]["TreeCopy"]["single file"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "yy"
   child.type_keys { "<C-u>", "test_dir/dir_b", }
@@ -413,7 +429,8 @@ T["tree"]["plug remaps"]["TreeCopy"]["directory"] = function()
   )
 end
 T["tree"]["plug remaps"]["TreeCopy"]["to parent path"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "yy"
   child.type_keys { "<C-u>", "test_dir", }
@@ -426,14 +443,16 @@ T["tree"]["plug remaps"]["TreeCopy"]["to parent path"] = function()
   )
 end
 T["tree"]["plug remaps"]["TreeCopy"]["abort empty"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "yy"
   child.type_keys { "<C-u>", "<CR>", }
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
 end
 T["tree"]["plug remaps"]["TreeCopy"]["abort confirmation"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "yy"
   child.type_keys { "<C-u>", "test_dir/dir_b", }
@@ -443,7 +462,7 @@ T["tree"]["plug remaps"]["TreeCopy"]["abort confirmation"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua", false)
 end
 T["tree"]["plug remaps"]["TreeCopy"]["visual mode"] = function()
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/dir_c")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "V"
@@ -466,7 +485,8 @@ T["tree"]["plug remaps"]["TreeCopy"]["visual mode"] = function()
   )
 end
 T["tree"]["plug remaps"]["TreeCopy"]["destination exists"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.fn.writefile({}, "test_dir/dir_b/init.lua")
   child.type_keys "yy"
@@ -480,13 +500,15 @@ end
 
 T["tree"]["plug remaps"]["TreeMove"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeMove"]["prepopulates dirname"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   child.type_keys "m"
   eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/dir_a/")
   child.type_keys { "<C-u>", "<CR>", }
 end
 T["tree"]["plug remaps"]["TreeMove"]["single file"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "m"
   child.type_keys { "<C-u>", "test_dir/dir_b", }
@@ -511,7 +533,8 @@ T["tree"]["plug remaps"]["TreeMove"]["directory"] = function()
   )
 end
 T["tree"]["plug remaps"]["TreeMove"]["to parent path"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "m"
   child.type_keys { "<C-u>", "test_dir", }
@@ -524,14 +547,16 @@ T["tree"]["plug remaps"]["TreeMove"]["to parent path"] = function()
   )
 end
 T["tree"]["plug remaps"]["TreeMove"]["abort empty"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "m"
   child.type_keys { "<C-u>", "<CR>", }
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
 end
 T["tree"]["plug remaps"]["TreeMove"]["abort confirmation"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "m"
   child.type_keys { "<C-u>", "test_dir/dir_b", }
@@ -541,7 +566,7 @@ T["tree"]["plug remaps"]["TreeMove"]["abort confirmation"] = function()
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua", false)
 end
 T["tree"]["plug remaps"]["TreeMove"]["visual mode"] = function()
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/dir_c")
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "V"
@@ -564,7 +589,8 @@ T["tree"]["plug remaps"]["TreeMove"]["visual mode"] = function()
   )
 end
 T["tree"]["plug remaps"]["TreeMove"]["files deleted"] = function()
-  child.type_keys { "l", "j", }
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
   child.type_keys "m"
   child.type_keys { "<C-u>", "test_dir/dir_b", }
@@ -589,49 +615,64 @@ end
 
 T["tree"]["cursor placement"]["prev-idx"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["prev-idx"]["same cursor position before and after"] = function()
-  child.type_keys "lj"
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_cursor_line(2, "  init.lua")
   mock_confirm(1)
   child.type_keys "dd"
+  flush()
   expect_cursor_line(2, " 󰛦 mod.ts")
 end
 T["tree"]["cursor placement"]["prev-idx"]["cursor is forced to an earlier index"] = function()
-  child.type_keys "ljj"
+  child.type_keys(20, "l")
+  child.type_keys "jj"
   expect_cursor_line(3, " 󰛦 mod.ts")
   mock_confirm(1)
   child.type_keys "dd"
+  flush()
   expect_cursor_line(2, "  init.lua")
 end
 T["tree"]["cursor placement"]["prev-idx"]["cursor is forced to the top of the buf"] = function()
-  child.type_keys "lVjj"
+  child.type_keys(20, "l")
+  child.type_keys "Vjj"
   expect_cursor_line(3, " 󰛦 mod.ts")
   mock_confirm(1)
   child.type_keys "d"
+  flush()
   expect_cursor_line(1, "")
 end
 
 T["tree"]["cursor placement"]["history-stack"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["history-stack"]["found"] = function()
-  child.type_keys "llj"
+  child.type_keys(20, "l")
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_cursor_line(2, " 󰌞 index.js")
-  child.type_keys "hhll"
+  child.type_keys(20, "h")
+  child.type_keys(20, "h")
+  child.type_keys(20, "l")
+  child.type_keys(20, "l")
   expect_cursor_line(2, " 󰌞 index.js")
 end
 T["tree"]["cursor placement"]["history-stack"]["not found"] = function()
-  child.type_keys "llj"
+  child.type_keys(20, "l")
+  child.type_keys(20, "l")
+  child.type_keys "j"
   expect_cursor_line(2, " 󰌞 index.js")
-  child.type_keys "hhj"
+  child.type_keys(20, "h")
+  child.type_keys(20, "h")
+  child.type_keys "j"
   expect_cursor_line(2, " 󰉋 dir_b")
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_cursor_line(1, " 󰈔 .env") -- not 2
 end
 
 T["tree"]["cursor placement"]["prev-dir-idx"] = function()
   child.type_keys "j"
   expect_cursor_line(2, " 󰉋 dir_b")
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_cursor_line(1, " 󰈔 .env")
-  child.type_keys "h"
+  child.type_keys(20, "h")
   expect_cursor_line(2, " 󰉋 dir_b") -- not 1
 end
 
@@ -641,6 +682,7 @@ T["tree"]["cursor placement"]["dest-path"]["found"] = function()
   child.type_keys "new_file.txt"
   mock_confirm(1)
   child.type_keys "<CR>"
+  flush()
   expect_cursor_line(3, " 󰦪 new_file.txt")
 end
 T["tree"]["cursor placement"]["dest-path"]["found nested"] = function()
@@ -648,15 +690,17 @@ T["tree"]["cursor placement"]["dest-path"]["found nested"] = function()
   child.type_keys "new_nested/path/file.lua"
   mock_confirm(1)
   child.type_keys "<CR>"
+  flush()
   expect_cursor_line(3, " 󰉋 new_nested")
 end
 T["tree"]["cursor placement"]["not found fallback"] = function()
-  child.type_keys "l"
+  child.type_keys(20, "l")
   expect_cursor_line(1, " 󰉋 dir_c")
   child.type_keys "o"
   child.type_keys "../new_file.txt"
   mock_confirm(1)
   child.type_keys "<CR>"
+  flush()
   expect_cursor_line(1, " 󰉋 dir_c")
 end
 
