@@ -21,6 +21,21 @@ local clear_cmdline = function()
   if vim.fn.mode() == "n" then vim.cmd [[normal! :<Esc>]] end
 end
 
+local function buf_delete(bufnr)
+  local alt = vim.fn.bufnr "#"
+  if alt ~= -1 then
+    vim.api.nvim_buf_delete(bufnr, {})
+    return
+  end
+
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_buf(win) == bufnr then
+      vim.api.nvim_win_set_buf(win, vim.api.nvim_create_buf(true, false))
+    end
+  end
+  vim.api.nvim_buf_delete(bufnr, {})
+end
+
 local function safe_resume(...)
   local ok, err = coroutine.resume(...)
   if not ok then
@@ -238,7 +253,7 @@ open = function(opts)
   end)()
 
   opts._curr_bufnr = (function()
-    if opts._curr_bufnr then
+    if vim.api.nvim_buf_is_valid(opts._curr_bufnr or -1) then
       return opts._curr_bufnr
     end
     return vim.api.nvim_get_current_buf()
@@ -644,10 +659,21 @@ open = function(opts)
       end
 
       for _, line in ipairs(lines_arg) do
+        local bufnr = vim.fn.bufnr(line.abs_path)
+        if bufnr ~= -1 and vim.bo[bufnr].modified then
+          notify(vim.log.levels.ERROR, "%s is a modified buffer", line.abs_path)
+          goto continue
+        end
+
         local success = vim.fn.delete(line.abs_path, "rf")
         if success == -1 then
           notify(vim.log.levels.ERROR, "vim.fn.delete(%s, rf) returned -1", line.abs_path)
+          goto continue
         end
+        -- TODO: doesn't handle deleting directories
+        if bufnr ~= -1 then buf_delete(bufnr) end
+
+        ::continue::
       end
 
       vim.api.nvim_exec_autocmds("User", { pattern = "TreeDelete", })
@@ -679,11 +705,16 @@ open = function(opts)
       return
     end
 
+    local bufnr = vim.fn.bufnr(line.abs_path)
     local success = vim.fn.rename(line.abs_path, rename_path)
     if success ~= 0 then
       notify(vim.log.levels.ERROR, "vim.fn.rename(%s, %s) returned %d", line.abs_path, rename_path, success)
       return
     end
+    if bufnr ~= -1 then
+      vim.api.nvim_buf_set_name(bufnr, rename_path)
+    end
+
     vim.schedule(function()
       recurse {
         _cursor_pos_type = "dest-path",
@@ -751,6 +782,12 @@ open = function(opts)
           goto continue
         end
 
+        local bufnr = vim.fn.bufnr(line.abs_path)
+        if bufnr ~= -1 and vim.bo[bufnr].modified then
+          notify(vim.log.levels.ERROR, "%s is a modified buffer", line.abs_path)
+          goto continue
+        end
+
         local obj_cp = vim.system { "cp", "-r", line.abs_path, copy_path, }:wait()
         if obj_cp.code ~= 0 then
           notify(vim.log.levels.ERROR, "`cp -r` exit code was %d", obj_cp.code)
@@ -758,7 +795,13 @@ open = function(opts)
         end
 
         if should_delete then
-          vim.fn.delete(line.abs_path, "rf")
+          local success = vim.fn.delete(line.abs_path, "rf")
+          if success == -1 then
+            notify(vim.log.levels.ERROR, "vim.fn.delete(%s, rf) returned -1", line.abs_path)
+            goto continue
+          end
+          -- TODO: doesn't handle deleting directories
+          if bufnr ~= -1 then buf_delete(bufnr) end
         end
 
         ::continue::
