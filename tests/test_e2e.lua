@@ -432,6 +432,29 @@ T["tree"]["plug remaps"]["TreeDelete"]["cleans up buffer"] = function()
   expect_fs_exists(abs, false)
   expect_buf_loaded(child.fn.bufnr(abs), false)
 end
+T["tree"]["plug remaps"]["TreeDelete"]["blocks on modified buffer in directory"] = function()
+  child.lua [[
+    local bufnr = vim.fn.bufadd(vim.fs.abspath("test_dir/dir_a/init.lua"))
+    vim.fn.bufload(bufnr)
+    vim.bo[bufnr].modified = true
+  ]]
+  mock_confirm(1)
+  expect.error(function() child.type_keys "dd" end)
+  expect_message("[tree.nvim]: " .. vim.fs.abspath "test_dir/dir_a/init.lua" .. " is a modified buffer")
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a")
+end
+T["tree"]["plug remaps"]["TreeDelete"]["cleans up buffers in directory"] = function()
+  child.lua [[
+    local bufnr = vim.fn.bufadd(vim.fs.abspath("test_dir/dir_a/init.lua"))
+    vim.fn.bufload(bufnr)
+  ]]
+  local abs = vim.fs.abspath "test_dir/dir_a/init.lua"
+  expect_buf_loaded(child.fn.bufnr(abs))
+  mock_confirm(1)
+  child.type_keys "dd"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", false)
+  expect_buf_loaded(child.fn.bufnr(abs), false)
+end
 
 T["tree"]["plug remaps"]["TreeCopy"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeCopy"]["prepopulates dirname"] = function()
@@ -674,6 +697,35 @@ T["tree"]["plug remaps"]["TreeMove"]["cleans up buffer"] = function()
   child.type_keys "<CR>"
   expect_fs_exists(abs, false)
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua")
+  expect_buf_loaded(child.fn.bufnr(abs), false)
+end
+T["tree"]["plug remaps"]["TreeMove"]["blocks on modified buffer in directory"] = function()
+  child.lua [[
+    local bufnr = vim.fn.bufadd(vim.fs.abspath("test_dir/dir_a/init.lua"))
+    vim.fn.bufload(bufnr)
+    vim.bo[bufnr].modified = true
+  ]]
+  child.type_keys "m"
+  child.type_keys { "<C-u>", "test_dir/dir_b", }
+  mock_confirm(1)
+  expect.error(function() child.type_keys "<CR>" end)
+  expect_message("[tree.nvim]: " .. vim.fs.abspath "test_dir/dir_a/init.lua" .. " is a modified buffer")
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a")
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_b/dir_a", false)
+end
+T["tree"]["plug remaps"]["TreeMove"]["cleans up buffers in directory"] = function()
+  child.lua [[
+    local bufnr = vim.fn.bufadd(vim.fs.abspath("test_dir/dir_a/init.lua"))
+    vim.fn.bufload(bufnr)
+  ]]
+  local abs = vim.fs.abspath "test_dir/dir_a/init.lua"
+  expect_buf_loaded(child.fn.bufnr(abs))
+  child.type_keys "m"
+  child.type_keys { "<C-u>", "test_dir/dir_b", }
+  mock_confirm(1)
+  child.type_keys "<CR>"
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a", false)
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_b/dir_a")
   expect_buf_loaded(child.fn.bufnr(abs), false)
 end
 T["tree"]["plug remaps"]["TreeMove"]["files deleted"] = function()

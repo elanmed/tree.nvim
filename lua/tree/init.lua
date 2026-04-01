@@ -36,6 +36,37 @@ local function buf_delete(bufnr)
   vim.api.nvim_buf_delete(bufnr, {})
 end
 
+local function buf_find_modified(path)
+  if vim.fn.isdirectory(path) == vimscript_true then
+    local prefix = vim.fs.joinpath(path, "/")
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].modified then
+        local name = vim.api.nvim_buf_get_name(bufnr)
+        if vim.startswith(name, prefix) then return name end
+      end
+    end
+  else
+    local bufnr = vim.fn.bufnr(path)
+    if bufnr ~= -1 and vim.bo[bufnr].modified then return path end
+  end
+  return nil
+end
+
+local function buf_delete_path(path)
+  if vim.fn.isdirectory(path) == vimscript_true then
+    local prefix = vim.fs.joinpath(path, "/")
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+      local name = vim.api.nvim_buf_get_name(bufnr)
+      if vim.startswith(name, prefix) and vim.api.nvim_buf_is_loaded(bufnr) then
+        buf_delete(bufnr)
+      end
+    end
+  else
+    local bufnr = vim.fn.bufnr(path)
+    if bufnr ~= -1 then buf_delete(bufnr) end
+  end
+end
+
 local function safe_resume(...)
   local ok, err = coroutine.resume(...)
   if not ok then
@@ -659,9 +690,9 @@ open = function(opts)
       end
 
       for _, line in ipairs(lines_arg) do
-        local bufnr = vim.fn.bufnr(line.abs_path)
-        if bufnr ~= -1 and vim.bo[bufnr].modified then
-          notify(vim.log.levels.ERROR, "%s is a modified buffer", line.abs_path)
+        local modified = buf_find_modified(line.abs_path)
+        if modified then
+          notify(vim.log.levels.ERROR, "%s is a modified buffer", modified)
           goto continue
         end
 
@@ -670,8 +701,7 @@ open = function(opts)
           notify(vim.log.levels.ERROR, "vim.fn.delete(%s, rf) returned -1", line.abs_path)
           goto continue
         end
-        -- TODO: doesn't handle deleting directories
-        if bufnr ~= -1 then buf_delete(bufnr) end
+        buf_delete_path(line.abs_path)
 
         ::continue::
       end
@@ -782,9 +812,9 @@ open = function(opts)
           goto continue
         end
 
-        local bufnr = vim.fn.bufnr(line.abs_path)
-        if bufnr ~= -1 and vim.bo[bufnr].modified then
-          notify(vim.log.levels.ERROR, "%s is a modified buffer", line.abs_path)
+        local modified = buf_find_modified(line.abs_path)
+        if modified then
+          notify(vim.log.levels.ERROR, "%s is a modified buffer", modified)
           goto continue
         end
 
@@ -800,8 +830,7 @@ open = function(opts)
             notify(vim.log.levels.ERROR, "vim.fn.delete(%s, rf) returned -1", line.abs_path)
             goto continue
           end
-          -- TODO: doesn't handle deleting directories
-          if bufnr ~= -1 then buf_delete(bufnr) end
+          buf_delete_path(line.abs_path)
         end
 
         ::continue::
