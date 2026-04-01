@@ -866,16 +866,20 @@ open = function(opts)
   end
 
   local function preview_toggle()
+    local line = lines[vim.fn.line "."]
+    if not line then return end
+
+    if vim.fn.isdirectory(line.abs_path) == vimscript_true then
+      notify(vim.log.levels.WARN, "Cannot preview a directory")
+    end
+
     local preview_open = get_preview_winnr() ~= nil
     if preview_open then
       vim.cmd.pclose()
       return
     end
 
-    local line = lines[vim.fn.line "."]
-    if not line then return end
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
-      notify(vim.log.levels.WARN, "Cannot preview a directory")
       return
     end
 
