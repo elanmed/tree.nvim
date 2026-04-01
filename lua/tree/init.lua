@@ -869,18 +869,21 @@ open = function(opts)
     local line = lines[vim.fn.line "."]
     if not line then return end
 
+    local preview_open = get_preview_winnr() ~= nil
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       notify(vim.log.levels.WARN, "Cannot preview a directory")
+      if preview_open then vim.cmd.pclose() end
+      return
     end
 
-    local preview_open = get_preview_winnr() ~= nil
     if preview_open then
-      vim.cmd.pclose()
-      return
-    end
-
-    if vim.fn.isdirectory(line.abs_path) == vimscript_true then
-      return
+      local preview_winnr = get_preview_winnr()
+      assert(preview_winnr ~= nil)
+      local preview_bufnr = vim.api.nvim_win_get_buf(preview_winnr)
+      local preview_name = vim.api.nvim_buf_get_name(preview_bufnr)
+      if preview_name == line.abs_path then
+        return vim.cmd.pclose()
+      end
     end
 
     vim.cmd("vertical pedit " .. line.abs_path)
