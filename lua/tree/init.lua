@@ -67,6 +67,15 @@ local function buf_delete_path(path)
   end
 end
 
+local function get_preview_winnr()
+  for _, winnr in ipairs(vim.api.nvim_list_wins()) do
+    if vim.wo[winnr].previewwindow then
+      return winnr
+    end
+  end
+  return nil
+end
+
 local function safe_resume(...)
   local ok, err = coroutine.resume(...)
   if not ok then
@@ -255,6 +264,7 @@ end
 --- @field tree_win_opts? vim.wo
 --- @field icons_enabled? boolean
 --- @field tree_win_config? table
+--- @field preview_width? number
 --- @field _tree_bufnr? number
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
@@ -273,6 +283,7 @@ open = function(opts)
   opts.icons_enabled = if_nil(opts.icons_enabled, true)
   opts.tree_win_opts = if_nil(opts.tree_win_opts, {})
   opts.tree_win_config = if_nil(opts.tree_win_config, {})
+  opts.preview_width = if_nil(opts.preview_width, math.floor(vim.o.columns / 2))
   opts._history = if_nil(opts._history, {})
   opts._cursor_pos_type = if_nil(opts._cursor_pos_type, "curr-bufname")
 
@@ -854,6 +865,26 @@ open = function(opts)
     copy_lines(visual_or_current_lines)
   end
 
+  local function preview_toggle()
+    local preview_open = get_preview_winnr() ~= nil
+    if preview_open then
+      vim.cmd.pclose()
+      return
+    end
+
+    local line = lines[vim.fn.line "."]
+    if not line then return end
+    if vim.fn.isdirectory(line.abs_path) == vimscript_true then
+      notify(vim.log.levels.WARN, "Cannot preview a directory")
+      return
+    end
+
+    vim.cmd("vertical pedit " .. line.abs_path)
+    local preview_winnr = get_preview_winnr()
+    assert(preview_winnr ~= nil)
+    vim.api.nvim_win_set_width(preview_winnr, opts.preview_width)
+  end
+
   local normal_keymap_fns = {
     CloseTree = close_tree,
     Select = select,
@@ -869,6 +900,7 @@ open = function(opts)
     Rename = rename,
     Copy = function() copy_and_maybe_delete(false) end,
     Move = function() copy_and_maybe_delete(true) end,
+    PreviewToggle = preview_toggle,
   }
 
   local visual_keymap_fns = {

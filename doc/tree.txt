@@ -1,4 +1,4 @@
-*tree.txt*                                          Last change: 2026 March 30
+*tree.txt*                                          Last change: 2026 March 31
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
@@ -22,6 +22,7 @@ Plug remaps ............................................... |tree-plug-remaps|
 `<Plug>TreeCopy` ....................................... |tree-<plug>treecopy|
 `<Plug>TreeMove` ....................................... |tree-<plug>treemove|
 `<Plug>TreeRefresh` ................................. |tree-<plug>treerefresh|
+`<Plug>TreePreviewToggle` ..................... |tree-<plug>treepreviewtoggle|
 
 ==============================================================================
 `TREE.NVIM`                                                   *tree-tree.nvim*
@@ -70,6 +71,7 @@ API                                                                 *tree-api*
     --- @field tree_win_opts? vim.wo options to apply to the tree window
     --- @field tree_win_config? table configuration passed to `nvim_open_win`
     --- @field icons_enabled? boolean
+    --- @field preview_width? number
     --- ... and some other internal options passed to the recursive calls
     --- @param opts? TreeOpts
     M.tree = function(opts) end
@@ -86,6 +88,7 @@ EXAMPLE CONFIG                                           *tree-example-config*
       icons_enabled = true,
       tree_win_opts = {},
       tree_win_config = {},
+      preview_width = math.floor(vim.o.columns / 2)
     })
     
     vim.api.nvim_create_autocmd("FileType", {
@@ -95,6 +98,7 @@ EXAMPLE CONFIG                                           *tree-example-config*
         vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = args.buf, })
         vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = args.buf, })
         vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
+        vim.keymap.set("n", "p", "<Plug>TreePreviewToggle", { buffer = args.buf, })
         vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
         vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
         vim.keymap.set("n", "yd", "<Plug>TreeYankDirectory", { buffer = args.buf, })
@@ -221,6 +225,12 @@ destination:
 `<PLUG>TREEREFRESH`                                   *tree-<plug>treerefresh*
 
 Refresh the tree to reflect any file system changes
+
+
+                                                                              
+`<PLUG>TREEPREVIEWTOGGLE`                       *tree-<plug>treepreviewtoggle*
+
+Preview the file under the cursor in a preview window
 
 
 vim:tw=78:ts=8:ft=help:norl:

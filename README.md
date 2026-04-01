@@ -33,6 +33,7 @@ A simple file tree built with the `vim.fs.*` utilities
 --- @field tree_win_opts? vim.wo options to apply to the tree window
 --- @field tree_win_config? table configuration passed to `nvim_open_win`
 --- @field icons_enabled? boolean
+--- @field preview_width? number
 --- ... and some other internal options passed to the recursive calls
 --- @param opts? TreeOpts
 M.tree = function(opts) end
@@ -47,6 +48,7 @@ require "tree".tree({
   icons_enabled = true,
   tree_win_opts = {},
   tree_win_config = {},
+  preview_width = math.floor(vim.o.columns / 2)
 })
 
 vim.api.nvim_create_autocmd("FileType", {
@@ -56,6 +58,7 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = args.buf, })
     vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = args.buf, })
     vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
+    vim.keymap.set("n", "p", "<Plug>TreePreviewToggle", { buffer = args.buf, })
     vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
     vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
     vim.keymap.set("n", "yd", "<Plug>TreeYankDirectory", { buffer = args.buf, })
@@ -156,3 +159,7 @@ Move the file or directory under the cursor or visual selection to a destination
 #### `<Plug>TreeRefresh`
 
 Refresh the tree to reflect any file system changes
+
+#### `<Plug>TreePreviewToggle`
+
+Preview the file under the cursor in a preview window
