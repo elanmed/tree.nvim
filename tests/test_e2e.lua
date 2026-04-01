@@ -4,6 +4,23 @@ local expect = MiniTest.expect
 local eq = MiniTest.expect.equality
 local child = MiniTest.new_child_neovim()
 
+local expect_buf_loaded = MiniTest.new_expectation(
+  "buffer loaded",
+  function(bufnr, should_exist)
+    local loaded = bufnr ~= -1
+    if should_exist == nil then should_exist = true end
+    return loaded == should_exist
+  end,
+  function(bufnr, should_exist)
+    if should_exist == nil then should_exist = true end
+    if should_exist then
+      return string.format("Expected buffer to be loaded, but bufnr is %s", bufnr)
+    else
+      return string.format("Expected buffer not to be loaded, but bufnr is %s", bufnr)
+    end
+  end
+)
+
 local expect_fs_exists = MiniTest.new_expectation(
   "file system path exists",
   function(path, should_exist)
@@ -409,11 +426,11 @@ T["tree"]["plug remaps"]["TreeDelete"]["cleans up buffer"] = function()
     vim.fn.bufload(bufnr)
   ]]
   local abs = vim.fs.abspath "test_dir/dir_a/init.lua"
-  eq(child.fn.bufnr(abs) ~= -1, true)
+  expect_buf_loaded(child.fn.bufnr(abs))
   mock_confirm(1)
   child.type_keys "dd"
   expect_fs_exists(abs, false)
-  eq(child.fn.bufnr(abs), -1)
+  expect_buf_loaded(child.fn.bufnr(abs), false)
 end
 
 T["tree"]["plug remaps"]["TreeCopy"] = MiniTest.new_set()
@@ -650,15 +667,14 @@ T["tree"]["plug remaps"]["TreeMove"]["cleans up buffer"] = function()
     vim.fn.bufload(bufnr)
   ]]
   local abs = vim.fs.abspath "test_dir/dir_a/init.lua"
-  -- TODO: custom assertion
-  eq(child.fn.bufnr(abs) ~= -1, true)
+  expect_buf_loaded(child.fn.bufnr(abs))
   child.type_keys "m"
   child.type_keys { "<C-u>", "test_dir/dir_b", }
   mock_confirm(1)
   child.type_keys "<CR>"
   expect_fs_exists(abs, false)
   expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua")
-  eq(child.fn.bufnr(abs), -1)
+  expect_buf_loaded(child.fn.bufnr(abs), false)
 end
 T["tree"]["plug remaps"]["TreeMove"]["files deleted"] = function()
   child.type_keys "l"
