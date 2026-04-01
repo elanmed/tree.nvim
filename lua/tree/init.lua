@@ -865,6 +865,7 @@ open = function(opts)
     copy_lines(visual_or_current_lines)
   end
 
+  -- TODO: tests
   local function preview_toggle()
     local line = lines[vim.fn.line "."]
     if not line then return end
