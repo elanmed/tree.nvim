@@ -190,14 +190,6 @@ local get_icon_info = function(opts)
   }
 end
 
---- @param winnr number
---- @param opts vim.wo
-local set_opts = function(winnr, opts)
-  for opt, value in pairs(opts) do
-    vim.api.nvim_set_option_value(opt, value, { win = winnr, })
-  end
-end
-
 --- @param lines Line['']
 --- @return Line[]
 local get_visual_or_current_lines = function(lines)
@@ -261,9 +253,7 @@ end
 
 --- @class TreeOpts
 --- @field tree_dir? string
---- @field tree_win_opts? vim.wo
 --- @field icons_enabled? boolean
---- @field tree_win_config? table
 --- @field preview_width? number
 --- @field _tree_bufnr? number
 --- @field _curr_winnr? number
@@ -281,8 +271,6 @@ open = function(opts)
   opts = vim.deepcopy(opts)
 
   opts.icons_enabled = if_nil(opts.icons_enabled, true)
-  opts.tree_win_opts = if_nil(opts.tree_win_opts, {})
-  opts.tree_win_config = if_nil(opts.tree_win_config, {})
   opts.preview_width = if_nil(opts.preview_width, math.floor(vim.o.columns / 2))
   opts._history = if_nil(opts._history, {})
   opts._cursor_pos_type = if_nil(opts._cursor_pos_type, "curr-bufname")
@@ -438,7 +426,7 @@ open = function(opts)
       return vim.g.tree_winnr
     end
 
-    local win_config = vim.tbl_deep_extend("force", {
+    local win_config = {
       relative = "editor",
       row = 1,
       col = 0,
@@ -447,15 +435,19 @@ open = function(opts)
       border = "rounded",
       style = "minimal",
       title = title,
-    }, opts.tree_win_config)
+    }
     local tree_winnr = vim.api.nvim_open_win(opts._tree_bufnr, true, win_config)
     vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
     vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
-    set_opts(tree_winnr, opts.tree_win_opts)
 
     return tree_winnr
   end)()
   vim.api.nvim_win_set_buf(vim.g.tree_winnr, opts._tree_bufnr)
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = "TreeOpen",
+    data = { winnr = vim.g.tree_winnr, bufnr = opts._tree_bufnr, },
+  })
+
 
   if opts._cursor_pos_type == "curr-bufname" then
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx or 1, 0, })
@@ -510,9 +502,7 @@ open = function(opts)
         if line then return line.abs_path end
       end)(),
 
-      tree_win_opts = opts.tree_win_opts,
       icons_enabled = opts.icons_enabled,
-      tree_win_config = opts.tree_win_config,
 
       _tree_bufnr = opts._tree_bufnr,
       _curr_winnr = opts._curr_winnr,
