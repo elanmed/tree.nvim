@@ -30,8 +30,6 @@ A simple file tree built with the `vim.fs.*` utilities
 ```lua
 --- @class TreeOpts
 --- @field tree_dir? string
---- @field tree_win_opts? vim.wo options to apply to the tree window
---- @field tree_win_config? table configuration passed to `nvim_open_win`
 --- @field icons_enabled? boolean
 --- @field preview_width? number
 --- ... and some other internal options passed to the recursive calls
@@ -46,34 +44,44 @@ require "tree".tree({
   -- defaults to
   tree_dir = "[the directory of the current buffer]",
   icons_enabled = true,
-  tree_win_opts = {},
-  tree_win_config = {},
   preview_width = math.floor(vim.o.columns / 2)
 })
 
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "tree",
-  callback = function(args)
-    vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = args.buf, })
-    vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = args.buf, })
-    vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = args.buf, })
-    vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = args.buf, })
-    vim.keymap.set("n", "p", "<Plug>TreePreviewToggle", { buffer = args.buf, })
-    vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = args.buf, })
-    vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = args.buf, })
-    vim.keymap.set("n", "yd", "<Plug>TreeYankDirectory", { buffer = args.buf, })
-    vim.keymap.set("n", "yb", "<Plug>TreeYankBasename", { buffer = args.buf, })
-    vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = args.buf, })
-    vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = args.buf, })
-    vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = args.buf, })
-    vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = args.buf, })
-    vim.keymap.set("n", "yy", "<Plug>TreeCopy", { buffer = args.buf, })
-    vim.keymap.set("n", "m", "<Plug>TreeMove", { buffer = args.buf, })
+  callback = function(ev)
+    vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = ev.buf, })
+    vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = ev.buf, })
+    vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = ev.buf, })
+    vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = ev.buf, })
+    vim.keymap.set("n", "p", "<Plug>TreePreviewToggle", { buffer = ev.buf, })
+    vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = ev.buf, })
+    vim.keymap.set("n", "ya", "<Plug>TreeYankAbsolutePath", { buffer = ev.buf, })
+    vim.keymap.set("n", "yd", "<Plug>TreeYankDirectory", { buffer = ev.buf, })
+    vim.keymap.set("n", "yb", "<Plug>TreeYankBasename", { buffer = ev.buf, })
+    vim.keymap.set("n", "o", "<Plug>TreeCreate", { buffer = ev.buf, })
+    vim.keymap.set("n", "e", "<Plug>TreeRefresh", { buffer = ev.buf, })
+    vim.keymap.set("n", "r", "<Plug>TreeRename", { buffer = ev.buf, })
+    vim.keymap.set("n", "dd", "<Plug>TreeDelete", { buffer = ev.buf, })
+    vim.keymap.set("n", "yy", "<Plug>TreeCopy", { buffer = ev.buf, })
+    vim.keymap.set("n", "m", "<Plug>TreeMove", { buffer = ev.buf, })
 
     -- supports multiple items
-    vim.keymap.set("v", "d", "<Plug>TreeDelete", { buffer = args.buf, })
-    vim.keymap.set("v", "yy", "<Plug>TreeCopy", { buffer = args.buf, })
-    vim.keymap.set("v", "m", "<Plug>TreeMove", { buffer = args.buf, })
+    vim.keymap.set("v", "d", "<Plug>TreeDelete", { buffer = ev.buf, })
+    vim.keymap.set("v", "yy", "<Plug>TreeCopy", { buffer = ev.buf, })
+    vim.keymap.set("v", "m", "<Plug>TreeMove", { buffer = ev.buf, })
+  end,
+})
+
+-- to configure the tree window
+vim.api.nvim_create_autocmd("User", {
+  pattern = "TreeOpen",
+  callback = function(ev)
+    -- ev.data includes `winnr` and `bufnr`
+    vim.api.nvim_win_set_config(ev.data.winnr, {
+      border = "single",
+    })
+    vim.wo[ev.data.winnr].relativenumber = true
   end,
 })
 ```
