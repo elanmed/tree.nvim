@@ -6,6 +6,8 @@ local vimscript_false = 0
 local ns_id = vim.api.nvim_create_namespace "Tree"
 vim.g.tree_winnr = -1
 
+local a = require "tree.async"
+
 local esc_to_normal = function()
   local curr_mode = vim.fn.mode()
   if curr_mode == "v" or curr_mode == "V" then
@@ -74,71 +76,6 @@ local function get_preview_winnr()
     end
   end
   return nil
-end
-
-local function safe_resume(...)
-  local ok, err = coroutine.resume(...)
-  if not ok then
-    error(err)
-  end
-end
-
---- @generic InvariantState, ControlVar
---- @param iterator_factory fun(): ((fun(invariant_state: InvariantState, control_var: ControlVar):ControlVar), InvariantState?, ControlVar?)
---- @param on_iteration fun(entry: ControlVar):nil
-local function throttled_iterator(iterator_factory, on_iteration)
-  return function(resolve)
-    local threshold_ns = 10 * 1000000
-
-    local function create_throttle()
-      local last_yield = vim.uv.hrtime()
-      return function()
-        local now = vim.uv.hrtime()
-        if (now - last_yield) >= threshold_ns then
-          last_yield = now
-          local thread = coroutine.running()
-          vim.schedule(function() safe_resume(thread) end)
-          coroutine.yield()
-        end
-      end
-    end
-
-    local function process()
-      local maybe_pause = create_throttle()
-
-      local iter_fn, invariant_state, control_var = iterator_factory()
-      while true do
-        maybe_pause()
-
-        local values = { iter_fn(invariant_state, control_var), }
-        control_var = values[1]
-
-        if control_var == nil then
-          resolve()
-          return
-        end
-
-        on_iteration(unpack(values))
-      end
-    end
-
-    safe_resume(coroutine.create(process))
-  end
-end
-
---- @param promise fun(resolve: fun():nil):nil
-local await = function(promise)
-  local thread = coroutine.running()
-  assert(thread ~= nil, "`await` can only be called in a coroutine")
-  vim.schedule(function() promise(function() coroutine.resume(thread) end) end)
-  coroutine.yield()
-end
-
---- @param fn fun(...):nil
-local async = function(fn)
-  return function(...)
-    safe_resume(coroutine.create(fn), ...)
-  end
 end
 
 --- @param level vim.log.levels
@@ -377,7 +314,7 @@ open = function(opts)
     end
   end
 
-  await(throttled_iterator(
+  a.await(a.throttled_iterator(
     function() return vim.fs.dir(opts.tree_dir) end,
     populate_lines
   ))
@@ -400,7 +337,7 @@ open = function(opts)
     )
   end
 
-  await(throttled_iterator(
+  a.await(a.throttled_iterator(
     function() return ipairs(lines) end,
     highlight_lines
   ))
@@ -493,7 +430,8 @@ open = function(opts)
     r_opts = vim.deepcopy(r_opts)
     r_opts.tree_dir = if_nil(r_opts.tree_dir, opts.tree_dir)
 
-    async(open) {
+    local spawn = a.make_spawn(open)
+    spawn {
       tree_dir = r_opts.tree_dir,
       _cursor_pos_type = r_opts._cursor_pos_type,
       _dest_path = r_opts._dest_path,
@@ -924,7 +862,8 @@ end
 
 --- @param opts? TreeOpts
 M.tree = function(opts)
-  async(open)(opts)
+  local spawn = a.make_spawn(open)
+  spawn(opts)
 end
 
 return M
