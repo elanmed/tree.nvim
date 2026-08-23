@@ -214,7 +214,7 @@ T["tree"]["plug remaps"]["TreeSelect"] = function()
   expect_lines {
     "<div>content</div>",
   }
-  child.lua [[M.tree()]]
+  child.lua [[M.tree(); vim.wait(1)]]
   expect_lines {
     " 󰌝 index.html",
     " 󰌞 index.js",
@@ -859,12 +859,12 @@ T["tree"]["cursor placement"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["curr-bufname"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["curr-bufname"]["found"] = function()
   child.lua [[vim.cmd.edit("test_dir/dir_a/init.lua")]]
-  child.lua [[M.tree()]]
+  child.lua [[M.tree(); vim.wait(1)]]
   expect_cursor_line(2, "  init.lua")
 end
 T["tree"]["cursor placement"]["curr-bufname"]["not found"] = function()
   child.lua [[vim.cmd.edit("test_dir/dir_b/Makefile")]]
-  child.lua [[M.tree({ tree_dir = "./test_dir/dir_a" })]]
+  child.lua [[M.tree({ tree_dir = "./test_dir/dir_a" }); vim.wait(1)]]
   expect_cursor_line(1, " 󰉋 dir_c")
 end
 
