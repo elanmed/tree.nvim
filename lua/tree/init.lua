@@ -316,7 +316,7 @@ open = function(opts)
 
   a.await(a.throttled_iterator(
     function() return vim.fs.dir(opts.tree_dir) end,
-    populate_lines
+    { on_iteration = populate_lines, }
   ))
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
@@ -339,7 +339,7 @@ open = function(opts)
 
   a.await(a.throttled_iterator(
     function() return ipairs(lines) end,
-    highlight_lines
+    { on_iteration = highlight_lines, }
   ))
 
   local width_padding = 10
