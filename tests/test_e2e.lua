@@ -200,6 +200,23 @@ T["tree"]["plug remaps"]["TreeOutDir"] = function()
     " 󰉋 dir_b",
   }
 end
+T["tree"]["plug remaps"]["TreeOutDir from empty dir"] = function()
+  child.fn.mkdir(vim.fs.abspath "test_dir/empty")
+  child.type_keys "e"
+  child.cmd "messages clear"
+  expect_lines {
+    " 󰉋 dir_a",
+    " 󰉋 dir_b",
+    " 󰉋 empty",
+  }
+  child.type_keys "j"
+  child.type_keys "j"
+  expect_cursor_line(3, " 󰉋 empty")
+  child.type_keys "l"
+  child.type_keys "h"
+  expect_cursor_line(3, " 󰉋 empty")
+  expect_message ""
+end
 T["tree"]["plug remaps"]["TreeSelect"] = function()
   expect_cursor_line(1, " 󰉋 dir_a")
   child.type_keys "l"
