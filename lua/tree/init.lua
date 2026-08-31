@@ -195,7 +195,7 @@ end
 --- @field _tree_bufnr? number
 --- @field _curr_winnr? number
 --- @field _curr_bufnr? number
---- @field _prev_path? string
+--- @field _prev_dir? string
 --- @field _prev_idx? number
 --- @field _dest_path? string
 --- @field _cursor_pos_type? TreeCursorPosType
@@ -305,7 +305,7 @@ open = function(opts)
       curr_bufname_idx = #lines
     end
 
-    if abs_path == vim.fs.dirname(opts._prev_path) then
+    if abs_path == opts._prev_dir then
       prev_dir_idx = #lines
     end
 
@@ -423,6 +423,7 @@ open = function(opts)
   --- @class RecurseOpts
   --- @field tree_dir? string
   --- @field _dest_path? string
+  --- @field _prev_dir? string
   --- @field _cursor_pos_type TreeCursorPosType
 
   --- @param r_opts RecurseOpts
@@ -435,10 +436,7 @@ open = function(opts)
       tree_dir = r_opts.tree_dir,
       _cursor_pos_type = r_opts._cursor_pos_type,
       _dest_path = r_opts._dest_path,
-      _prev_path = (function()
-        local line = lines[vim.fn.line "."]
-        if line then return line.abs_path end
-      end)(),
+      _prev_dir = r_opts._prev_dir,
 
       icons_enabled = opts.icons_enabled,
 
@@ -456,6 +454,7 @@ open = function(opts)
 
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
+      _prev_dir = opts.tree_dir,
       _cursor_pos_type = "prev-dir-idx",
     }
   end
