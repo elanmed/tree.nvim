@@ -1501,7 +1501,6 @@ _confirm_foldexpr	deps/mini.nvim/lua/mini/deps.lua	/^  MiniDeps._confirm_foldexp
 _curr_bufnr	lua/tree/init.lua	/^  opts._curr_bufnr = (function()$/;"	f	unknown:opts
 _curr_winnr	lua/tree/init.lua	/^  opts._curr_winnr = (function()$/;"	f	unknown:opts
 _edit	deps/mini.nvim/lua/mini/git.lua	/^  MiniGit._edit = function(path, servername)$/;"	f	unknown:MiniGit
-_prev_path	lua/tree/init.lua	/^      _prev_path = (function()$/;"	f
 _private_method	deps/mini.nvim/tests/dir-doc/sections/init.lua	/^M._private_method = function(x) return x + 2 end$/;"	f	unknown:M
 _tree_bufnr	lua/tree/init.lua	/^  opts._tree_bufnr = (function()$/;"	f	unknown:opts
 `']	deps/mini.nvim/tests/test_bracketed.lua	/^T['undo()']['does not register undo actions without `register_undo_state()`'] = function()$/;"	f
@@ -3726,6 +3725,7 @@ dimensions']	deps/mini.nvim/tests/test_files.lua	/^T['Windows']['works with too 
 dimensions']	deps/mini.nvim/tests/test_map.lua	/^T['encode_strings()']['correctly computes default dimensions'] = function()$/;"	f
 dimensions']	deps/mini.nvim/tests/test_pick.lua	/^T['Overall view']['allows very large dimensions'] = function()$/;"	f
 dimensions']	deps/mini.nvim/tests/test_pick.lua	/^T['Overall view']['works with small available dimensions'] = function()$/;"	f
+dir"]	tests/test_e2e.lua	/^T["tree"]["plug remaps"]["TreeOutDir from empty dir"] = function()$/;"	f
 dir_filter	deps/mini.nvim/tests/test_extra.lua	/^    _G.dir_filter = function(item)$/;"	f	unknown:_G
 direction`']	deps/mini.nvim/tests/test_animate.lua	/^T['gen_winconfig']['center()']['respects `opts.direction`'] = function()$/;"	f	unknown:`opts
 direction`']	deps/mini.nvim/tests/test_animate.lua	/^T['gen_winconfig']['wipe()']['respects `opts.direction`'] = function()$/;"	f	unknown:`opts
