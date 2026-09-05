@@ -269,9 +269,6 @@ open = function(opts)
   --- @type Line[]
   local lines = {}
 
-  --- @type string[]
-  local formatted_lines = {}
-
   local max_line_width = 0
 
   --- @type number
@@ -287,88 +284,25 @@ open = function(opts)
   local history_line = nil
   local top_history = opts._history[#opts._history]
 
-  --- @param name string
-  --- @param type "file"|"directory"
-  local populate_lines = function(name, type)
+  local vim_fs_dir_count = 0
+  for name, type in vim.fs.dir(opts.tree_dir) do
+    vim_fs_dir_count = vim_fs_dir_count + 1
+
     name = type == "directory" and name .. "/" or name
-
-    local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, vim.fs.normalize(name)))
-    local basename = vim.fs.basename(abs_path)
-
-    local icon_type = type == "directory" and "directory" or "file"
-    local icon_info =
-      get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type }
-    local formatted = " " .. icon_info.icon_char .. basename
-    max_line_width = math.max(max_line_width, #formatted)
-
-    --- @type Line
-    local line = {
-      abs_path = abs_path,
-      formatted = formatted,
-      icon_char = icon_info.icon_char,
-      icon_hl = icon_info.icon_hl,
-    }
-    table.insert(lines, line)
-    table.insert(formatted_lines, formatted)
-
-    if abs_path == top_history then
-      history_line = #lines
-    end
-
-    if abs_path == curr_bufname_abs_path then
-      curr_bufname_idx = #lines
-    end
-
-    if abs_path == opts._prev_dir then
-      prev_dir_idx = #lines
-    end
-
-    if abs_path == opts._dest_path then
-      dest_path_idx = #lines
-    end
+    local basename = vim.fs.basename(name)
+    local icon_placeholder = " "
+    local formatted_placeholder = " " .. icon_placeholder .. basename
+    max_line_width = math.max(max_line_width, #formatted_placeholder)
   end
-
-  a.throttled_iterator_async {
-    iterator_factory = function()
-      return vim.fs.dir(opts.tree_dir)
-    end,
-    opts = { on_iteration = populate_lines },
-  }
-
-  vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr })
-  vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
-  vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr })
-
-  local highlight_lines = function(idx, line)
-    local leading_space = 1
-    local icon_hl_col_0_indexed = leading_space
-    local row_1_indexed = idx
-    local row_0_indexed = row_1_indexed - 1
-    vim.hl.range(
-      opts._tree_bufnr,
-      ns_id,
-      line.icon_hl,
-      { row_0_indexed, icon_hl_col_0_indexed },
-      { row_0_indexed, icon_hl_col_0_indexed + 1 }
-    )
-  end
-
-  a.throttled_iterator_async {
-    iterator_factory = function()
-      return ipairs(lines)
-    end,
-    opts = { on_iteration = highlight_lines },
-  }
-
-  local width_padding = 10
 
   vim.g.tree_winnr = (function()
     local dirname = vim.fs.joinpath(vim.fs.basename(opts.tree_dir), "/")
-    local title = ("%s (%d lines)"):format(dirname, #lines)
+    local title = ("%s (%d lines)"):format(dirname, vim_fs_dir_count)
     local border_height = 2
+    local width_padding = 10
     local width = math.max(#title, max_line_width + width_padding)
     local editor_height = vim.api.nvim_win_get_height(opts._curr_winnr)
-    local height = math.min(#lines, editor_height - border_height)
+    local height = math.min(vim_fs_dir_count, editor_height - border_height)
     if height < 1 then
       height = 1
     end
@@ -404,6 +338,79 @@ open = function(opts)
     pattern = "TreeOpen",
     data = { winnr = vim.g.tree_winnr, bufnr = opts._tree_bufnr },
   })
+
+  --- @param name string
+  --- @param type "file"|"directory"
+  local populate_lines = function(name, type)
+    name = type == "directory" and name .. "/" or name
+
+    local abs_path = vim.fs.normalize(vim.fs.joinpath(opts.tree_dir, vim.fs.normalize(name)))
+    local basename = vim.fs.basename(abs_path)
+
+    local icon_type = type == "directory" and "directory" or "file"
+    local icon_info =
+      get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type }
+    local formatted = " " .. icon_info.icon_char .. basename
+
+    --- @type Line
+    local line = {
+      abs_path = abs_path,
+      formatted = formatted,
+      icon_char = icon_info.icon_char,
+      icon_hl = icon_info.icon_hl,
+    }
+    table.insert(lines, line)
+
+    if abs_path == top_history then
+      history_line = #lines
+    end
+
+    if abs_path == curr_bufname_abs_path then
+      curr_bufname_idx = #lines
+    end
+
+    if abs_path == opts._prev_dir then
+      prev_dir_idx = #lines
+    end
+
+    if abs_path == opts._dest_path then
+      dest_path_idx = #lines
+    end
+
+    vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr })
+    local row_1_indexed = #lines
+    local row_0_indexed = row_1_indexed - 1
+    vim.api.nvim_buf_set_lines(
+      opts._tree_bufnr,
+      row_0_indexed,
+      row_0_indexed + 1,
+      false,
+      { formatted }
+    )
+    vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr })
+
+    local leading_space = 1
+    local icon_hl_col_0_indexed = leading_space
+    vim.hl.range(
+      opts._tree_bufnr,
+      ns_id,
+      line.icon_hl,
+      { row_0_indexed, icon_hl_col_0_indexed },
+      { row_0_indexed, icon_hl_col_0_indexed + 1 }
+    )
+  end
+
+  vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr })
+  vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, {})
+  vim.api.nvim_buf_clear_namespace(opts._tree_bufnr, ns_id, 0, -1)
+  vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr })
+
+  a.throttled_iterator {
+    iterator_factory = function()
+      return vim.fs.dir(opts.tree_dir)
+    end,
+    on_iteration = populate_lines,
+  }
 
   if opts._cursor_pos_type == "curr-bufname" then
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx or 1, 0 })
