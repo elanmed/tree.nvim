@@ -1,4 +1,4 @@
-.PHONY: dev clean test lint docs
+.PHONY: dev clean test lint format docs
 
 dev:
 	mkdir -p ~/.local/share/nvim/site/pack/dev/start/tree.nvim
@@ -14,7 +14,12 @@ lint:
 	# https://luals.github.io/#install
 	lua-language-server --check=./lua --checklevel=Error
 
-docs: 
+format:
+	# https://github.com/JohnnyMorganz/StyLua#usage
+	stylua .
+
+docs:
+	mkdir -p ./doc
 	./deps/ts-vimdoc.nvim/scripts/docgen.sh README.md doc/tree.txt tree
 	nvim --headless -c "helptags doc/" -c "qa"
 
