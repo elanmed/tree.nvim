@@ -11,16 +11,14 @@ local a = require "tree.async"
 local esc_to_normal = function()
   local curr_mode = vim.fn.mode()
   if curr_mode == "v" or curr_mode == "V" then
-    vim.api.nvim_feedkeys(
-      vim.api.nvim_replace_termcodes("<Esc>", true, false, true),
-      "n",
-      false
-    )
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "n", false)
   end
 end
 
 local clear_cmdline = function()
-  if vim.fn.mode() == "n" then vim.cmd [[normal! :<Esc>]] end
+  if vim.fn.mode() == "n" then
+    vim.cmd [[normal! :<Esc>]]
+  end
 end
 
 local function buf_delete(bufnr)
@@ -44,12 +42,16 @@ local function buf_find_modified(path)
     for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
       if vim.api.nvim_buf_is_loaded(bufnr) and vim.bo[bufnr].modified then
         local name = vim.api.nvim_buf_get_name(bufnr)
-        if vim.startswith(name, prefix) then return name end
+        if vim.startswith(name, prefix) then
+          return name
+        end
       end
     end
   else
     local bufnr = vim.fn.bufnr(path)
-    if bufnr ~= -1 and vim.bo[bufnr].modified then return path end
+    if bufnr ~= -1 and vim.bo[bufnr].modified then
+      return path
+    end
   end
   return nil
 end
@@ -65,7 +67,9 @@ local function buf_delete_path(path)
     end
   else
     local bufnr = vim.fn.bufnr(path)
-    if bufnr ~= -1 then buf_delete(bufnr) end
+    if bufnr ~= -1 then
+      buf_delete(bufnr)
+    end
   end
 end
 
@@ -140,12 +144,16 @@ local get_visual_or_current_lines = function(lines)
       end_line = vim.fn.line "."
     end
 
-    if not lines[start_line] or not lines[end_line] then return {} end
+    if not lines[start_line] or not lines[end_line] then
+      return {}
+    end
     return vim.list_slice(lines, start_line, end_line)
   else
     local line = lines[vim.fn.line "."]
-    if not line then return {} end
-    return { line, }
+    if not line then
+      return {}
+    end
+    return { line }
   end
 end
 
@@ -166,7 +174,9 @@ end
 --- @field lines Line[]
 --- @param opts NormalizePrevIdxOpts
 local normalize_prev_idx = function(opts)
-  if opts._prev_idx == nil then return 1 end
+  if opts._prev_idx == nil then
+    return 1
+  end
 
   local prev_line_idx = opts._prev_idx
   while prev_line_idx > #opts.lines do
@@ -248,9 +258,9 @@ open = function(opts)
     end
 
     local tree_bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_option_value("buftype", "nofile", { buf = tree_bufnr, })
-    vim.api.nvim_set_option_value("buflisted", false, { buf = tree_bufnr, })
-    vim.api.nvim_set_option_value("filetype", "tree", { buf = tree_bufnr, })
+    vim.api.nvim_set_option_value("buftype", "nofile", { buf = tree_bufnr })
+    vim.api.nvim_set_option_value("buflisted", false, { buf = tree_bufnr })
+    vim.api.nvim_set_option_value("filetype", "tree", { buf = tree_bufnr })
 
     return tree_bufnr
   end)()
@@ -283,7 +293,8 @@ open = function(opts)
     local basename = vim.fs.basename(abs_path)
 
     local icon_type = type == "directory" and "directory" or "file"
-    local icon_info = get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type, }
+    local icon_info =
+      get_icon_info { abs_path = abs_path, icons_enabled = opts.icons_enabled, type = icon_type }
     local formatted = " " .. icon_info.icon_char .. basename
     max_line_width = math.max(max_line_width, #formatted)
 
@@ -314,14 +325,13 @@ open = function(opts)
     end
   end
 
-  a.await(a.throttled_iterator(
-    function() return vim.fs.dir(opts.tree_dir) end,
-    { on_iteration = populate_lines, }
-  ))
+  a.await(a.throttled_iterator(function()
+    return vim.fs.dir(opts.tree_dir)
+  end, { on_iteration = populate_lines }))
 
-  vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr, })
+  vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
-  vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr, })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = opts._tree_bufnr })
 
   local highlight_lines = function(idx, line)
     local leading_space = 1
@@ -332,15 +342,14 @@ open = function(opts)
       opts._tree_bufnr,
       ns_id,
       line.icon_hl,
-      { row_0_indexed, icon_hl_col_0_indexed, },
-      { row_0_indexed, icon_hl_col_0_indexed + 1, }
+      { row_0_indexed, icon_hl_col_0_indexed },
+      { row_0_indexed, icon_hl_col_0_indexed + 1 }
     )
   end
 
-  a.await(a.throttled_iterator(
-    function() return ipairs(lines) end,
-    { on_iteration = highlight_lines, }
-  ))
+  a.await(a.throttled_iterator(function()
+    return ipairs(lines)
+  end, { on_iteration = highlight_lines }))
 
   local width_padding = 10
 
@@ -351,7 +360,9 @@ open = function(opts)
     local width = math.max(#title, max_line_width + width_padding)
     local editor_height = vim.api.nvim_win_get_height(opts._curr_winnr)
     local height = math.min(#lines, editor_height - border_height)
-    if height < 1 then height = 1 end
+    if height < 1 then
+      height = 1
+    end
 
     if vim.api.nvim_win_is_valid(vim.g.tree_winnr) then
       vim.api.nvim_set_current_win(vim.g.tree_winnr)
@@ -374,50 +385,49 @@ open = function(opts)
       title = title,
     }
     local tree_winnr = vim.api.nvim_open_win(opts._tree_bufnr, true, win_config)
-    vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr, })
-    vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr, })
+    vim.api.nvim_set_option_value("foldmethod", "indent", { win = tree_winnr })
+    vim.api.nvim_set_option_value("cursorline", true, { win = tree_winnr })
 
     return tree_winnr
   end)()
   vim.api.nvim_win_set_buf(vim.g.tree_winnr, opts._tree_bufnr)
   vim.api.nvim_exec_autocmds("User", {
     pattern = "TreeOpen",
-    data = { winnr = vim.g.tree_winnr, bufnr = opts._tree_bufnr, },
+    data = { winnr = vim.g.tree_winnr, bufnr = opts._tree_bufnr },
   })
 
-
   if opts._cursor_pos_type == "curr-bufname" then
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx or 1, 0, })
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx or 1, 0 })
   elseif opts._cursor_pos_type == "history-stack" then
     if history_line then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { history_line, 0, })
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { history_line, 0 })
       table.remove(opts._history)
     else
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0, })
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0 })
       opts._history = {}
     end
   elseif opts._cursor_pos_type == "prev-dir-idx" then
     if prev_dir_idx then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_idx, 0, })
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_idx, 0 })
     else
       notify(vim.log.levels.ERROR, "Expected to find the prev dir when setting the cursor")
     end
   elseif opts._cursor_pos_type == "prev-idx" then
     vim.api.nvim_win_set_cursor(vim.g.tree_winnr, {
-      normalize_prev_idx { lines = lines, _prev_idx = opts._prev_idx, },
+      normalize_prev_idx { lines = lines, _prev_idx = opts._prev_idx },
       0,
     })
   elseif opts._cursor_pos_type == "dest-path" then
     if dest_path_idx then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { dest_path_idx, 0, })
+      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { dest_path_idx, 0 })
     else
       vim.api.nvim_win_set_cursor(vim.g.tree_winnr, {
-        normalize_prev_idx { lines = lines, _prev_idx = opts._prev_idx, },
+        normalize_prev_idx { lines = lines, _prev_idx = opts._prev_idx },
         0,
       })
     end
   else
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0, })
+    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0 })
   end
 
   --- @class RecurseOpts
@@ -450,7 +460,9 @@ open = function(opts)
 
   local out_dir = function()
     local line = lines[vim.fn.line "."]
-    if line then table.insert(opts._history, line.abs_path) end
+    if line then
+      table.insert(opts._history, line.abs_path)
+    end
 
     recurse {
       tree_dir = vim.fs.dirname(opts.tree_dir),
@@ -461,7 +473,9 @@ open = function(opts)
 
   local in_dir = function()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       recurse {
         tree_dir = line.abs_path,
@@ -478,7 +492,9 @@ open = function(opts)
 
   local select = function()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
 
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       in_dir()
@@ -492,14 +508,18 @@ open = function(opts)
 
   local yank_abs_path = function()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
     vim.fn.setreg("a", line.abs_path)
     notify(vim.log.levels.INFO, "Absolute path yanked: %s", line.abs_path)
   end
 
   local yank_rel_path = function()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
     local rel_path = vim.fs.relpath(vim.fn.getcwd(), line.abs_path)
     if rel_path == nil then
       notify(
@@ -516,7 +536,9 @@ open = function(opts)
 
   local yank_dir = function()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
     local dirname = vim.fs.dirname(line.abs_path)
     vim.fn.setreg("d", dirname)
     notify(vim.log.levels.INFO, "Dirname yanked: %s", dirname)
@@ -524,11 +546,15 @@ open = function(opts)
 
   local yank_basename = function()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
     local basename = (function()
       local basename_with_ext = vim.fs.basename(line.abs_path)
       local ext_idx = basename_with_ext:find "%."
-      if ext_idx == nil then return basename_with_ext end
+      if ext_idx == nil then
+        return basename_with_ext
+      end
       return basename_with_ext:sub(1, ext_idx - 1)
     end)()
 
@@ -537,14 +563,16 @@ open = function(opts)
   end
 
   local refresh = function()
-    recurse { _cursor_pos_type = "prev-idx", }
+    recurse { _cursor_pos_type = "prev-idx" }
     notify(vim.log.levels.INFO, "Refreshed")
   end
 
   local create = function()
     local abs_path = (function()
       local line = lines[vim.fn.line "."]
-      if line then return vim.fs.dirname(line.abs_path) end
+      if line then
+        return vim.fs.dirname(line.abs_path)
+      end
       return opts.tree_dir
     end)()
     local dirname = vim.fs.joinpath(abs_path, "/")
@@ -563,7 +591,11 @@ open = function(opts)
 
     if vim.endswith(raw_create_path, "/") then
       if fs_exists(create_path) then
-        notify(vim.log.levels.ERROR, "Cannot create a directory that already exists: %s", create_path)
+        notify(
+          vim.log.levels.ERROR,
+          "Cannot create a directory that already exists: %s",
+          create_path
+        )
         return
       end
 
@@ -576,7 +608,7 @@ open = function(opts)
       vim.schedule(function()
         recurse {
           _cursor_pos_type = "dest-path",
-          _dest_path = normalize_dest_path { path = create_path, tree_dir = opts.tree_dir, },
+          _dest_path = normalize_dest_path { path = create_path, tree_dir = opts.tree_dir },
         }
       end)
       return
@@ -602,10 +634,10 @@ open = function(opts)
     vim.schedule(function()
       recurse {
         _cursor_pos_type = "dest-path",
-        _dest_path = normalize_dest_path { path = create_path, tree_dir = opts.tree_dir, },
+        _dest_path = normalize_dest_path { path = create_path, tree_dir = opts.tree_dir },
       }
     end)
-    vim.api.nvim_exec_autocmds("User", { pattern = "TreeCreate", })
+    vim.api.nvim_exec_autocmds("User", { pattern = "TreeCreate" })
 
     vim.api.nvim_win_call(opts._curr_winnr, function()
       vim.cmd.edit(create_path)
@@ -644,9 +676,11 @@ open = function(opts)
         ::continue::
       end
 
-      vim.api.nvim_exec_autocmds("User", { pattern = "TreeDelete", })
+      vim.api.nvim_exec_autocmds("User", { pattern = "TreeDelete" })
       esc_to_normal()
-      vim.schedule(function() recurse { _cursor_pos_type = "prev-idx", } end)
+      vim.schedule(function()
+        recurse { _cursor_pos_type = "prev-idx" }
+      end)
     end
 
     local visual_or_current_lines = get_visual_or_current_lines(lines)
@@ -655,7 +689,9 @@ open = function(opts)
 
   local rename = function()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
     local raw_rename_path = vim.fn.input("Rename to: ", line.abs_path)
     if raw_rename_path == "" then
       clear_cmdline()
@@ -663,7 +699,11 @@ open = function(opts)
     end
     local rename_path = vim.fs.normalize(vim.fs.abspath(raw_rename_path))
 
-    local option = vim.fn.confirm(("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path), "&Yes\n&No", 2)
+    local option = vim.fn.confirm(
+      ("Rename\nFrom: %s\nTo:   %s"):format(line.abs_path, rename_path),
+      "&Yes\n&No",
+      2
+    )
     if option ~= 1 then
       return
     end
@@ -676,7 +716,13 @@ open = function(opts)
     local bufnr = vim.fn.bufnr(line.abs_path)
     local success = vim.fn.rename(line.abs_path, rename_path)
     if success ~= 0 then
-      notify(vim.log.levels.ERROR, "vim.fn.rename(%s, %s) returned %d", line.abs_path, rename_path, success)
+      notify(
+        vim.log.levels.ERROR,
+        "vim.fn.rename(%s, %s) returned %d",
+        line.abs_path,
+        rename_path,
+        success
+      )
       return
     end
     if bufnr ~= -1 then
@@ -689,7 +735,7 @@ open = function(opts)
         _dest_path = rename_path,
       }
     end)
-    vim.api.nvim_exec_autocmds("User", { pattern = "TreeRename", })
+    vim.api.nvim_exec_autocmds("User", { pattern = "TreeRename" })
   end
 
   --- @param should_delete boolean
@@ -733,12 +779,8 @@ open = function(opts)
       end
 
       for _, line in ipairs(lines_arg) do
-        local copy_file_path = vim.fs.normalize(
-          vim.fs.joinpath(
-            copy_path,
-            vim.fs.relpath(opts.tree_dir, line.abs_path)
-          )
-        )
+        local copy_file_path =
+          vim.fs.normalize(vim.fs.joinpath(copy_path, vim.fs.relpath(opts.tree_dir, line.abs_path)))
 
         if fs_exists(copy_file_path) then
           notify(
@@ -756,7 +798,7 @@ open = function(opts)
           goto continue
         end
 
-        local obj_cp = vim.system { "cp", "-r", line.abs_path, copy_path, }:wait()
+        local obj_cp = vim.system({ "cp", "-r", line.abs_path, copy_path }):wait()
         if obj_cp.code ~= 0 then
           notify(vim.log.levels.ERROR, "`cp -r` exit code was %d", obj_cp.code)
           goto continue
@@ -775,9 +817,9 @@ open = function(opts)
       end
 
       if should_delete then
-        vim.api.nvim_exec_autocmds("User", { pattern = "TreeMove", })
+        vim.api.nvim_exec_autocmds("User", { pattern = "TreeMove" })
       else
-        vim.api.nvim_exec_autocmds("User", { pattern = "TreeCopy", })
+        vim.api.nvim_exec_autocmds("User", { pattern = "TreeCopy" })
       end
       esc_to_normal()
       vim.schedule(function()
@@ -795,12 +837,16 @@ open = function(opts)
   -- TODO: tests
   local function preview_toggle()
     local line = lines[vim.fn.line "."]
-    if not line then return end
+    if not line then
+      return
+    end
 
     local preview_open = get_preview_winnr() ~= nil
     if vim.fn.isdirectory(line.abs_path) == vimscript_true then
       notify(vim.log.levels.WARN, "Cannot preview a directory")
-      if preview_open then vim.cmd.pclose() end
+      if preview_open then
+        vim.cmd.pclose()
+      end
       return
     end
 
@@ -833,15 +879,23 @@ open = function(opts)
     Refresh = refresh,
     Delete = delete,
     Rename = rename,
-    Copy = function() copy_and_maybe_delete(false) end,
-    Move = function() copy_and_maybe_delete(true) end,
+    Copy = function()
+      copy_and_maybe_delete(false)
+    end,
+    Move = function()
+      copy_and_maybe_delete(true)
+    end,
     PreviewToggle = preview_toggle,
   }
 
   local visual_keymap_fns = {
     Delete = delete,
-    Copy = function() copy_and_maybe_delete(false) end,
-    Move = function() copy_and_maybe_delete(true) end,
+    Copy = function()
+      copy_and_maybe_delete(false)
+    end,
+    Move = function()
+      copy_and_maybe_delete(true)
+    end,
   }
 
   for fn_name, fn in pairs(normal_keymap_fns) do

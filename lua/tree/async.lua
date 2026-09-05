@@ -11,7 +11,9 @@ local M = {}
 
 local function safe_resume(...)
   local ok, err = coroutine.resume(...)
-  if not ok then error(err) end
+  if not ok then
+    error(err)
+  end
 end
 
 local function default_reject(err)
@@ -25,7 +27,9 @@ M.from_executor = function(executor)
   return function(resolve, reject)
     reject = reject or default_reject
     local ok, err = pcall(executor, resolve, reject)
-    if not ok then reject(err) end
+    if not ok then
+      reject(err)
+    end
   end
 end
 
@@ -34,11 +38,11 @@ end
 --- @return AsyncFn<T>
 M.make_async = function(fn)
   return function(...)
-    local args = { ..., }
+    local args = { ... }
     return function(resolve, reject)
       reject = reject or default_reject
       local thread = coroutine.create(function()
-        local results = { pcall(fn, unpack(args)), }
+        local results = { pcall(fn, unpack(args)) }
         if results[1] then
           resolve(unpack(results, 2))
         else
@@ -70,10 +74,14 @@ M.await = function(promise)
   )
 
   local scheduled_promise = vim.schedule_wrap(promise)
-  local resolve = vim.schedule_wrap(function(...) safe_resume(thread, true, ...) end)
-  local reject = vim.schedule_wrap(function(err) safe_resume(thread, false, err) end)
+  local resolve = vim.schedule_wrap(function(...)
+    safe_resume(thread, true, ...)
+  end)
+  local reject = vim.schedule_wrap(function(err)
+    safe_resume(thread, false, err)
+  end)
   scheduled_promise(resolve, reject)
-  local results = { coroutine.yield(), }
+  local results = { coroutine.yield() }
   if not results[1] then
     error(results[2], 0)
   end
@@ -92,7 +100,9 @@ end
 M.throttled_iterator = function(iterator_factory, opts)
   local async_fn = M.make_async(function()
     local threshold_ns = opts.threshold_ns or (10 * 1000000)
-    local should_cancel = opts.should_cancel or (function() return false end)
+    local should_cancel = opts.should_cancel or function()
+      return false
+    end
 
     local function make_throttle()
       local last_yield = vim.uv.hrtime()
@@ -101,7 +111,9 @@ M.throttled_iterator = function(iterator_factory, opts)
         if (now - last_yield) >= threshold_ns then
           last_yield = now
           local thread = coroutine.running()
-          vim.schedule(function() safe_resume(thread) end)
+          vim.schedule(function()
+            safe_resume(thread)
+          end)
           coroutine.yield()
         end
       end
@@ -115,7 +127,7 @@ M.throttled_iterator = function(iterator_factory, opts)
       end
       maybe_pause()
 
-      local values = { iter_fn(invariant_state, control_var), }
+      local values = { iter_fn(invariant_state, control_var) }
       control_var = values[1]
 
       if control_var == nil then
