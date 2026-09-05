@@ -212,6 +212,7 @@ end
 --- @field _history? string[]
 
 local open
+--- @async
 --- @param opts? TreeOpts
 open = function(opts)
   opts = if_nil(opts, {})
@@ -286,6 +287,8 @@ open = function(opts)
   local history_line = nil
   local top_history = opts._history[#opts._history]
 
+  --- @param name string
+  --- @param type "file"|"directory"
   local populate_lines = function(name, type)
     name = type == "directory" and name .. "/" or name
 
@@ -325,9 +328,12 @@ open = function(opts)
     end
   end
 
-  a.await(a.throttled_iterator(function()
-    return vim.fs.dir(opts.tree_dir)
-  end, { on_iteration = populate_lines }))
+  a.throttled_iterator_async {
+    iterator_factory = function()
+      return vim.fs.dir(opts.tree_dir)
+    end,
+    opts = { on_iteration = populate_lines },
+  }
 
   vim.api.nvim_set_option_value("modifiable", true, { buf = opts._tree_bufnr })
   vim.api.nvim_buf_set_lines(opts._tree_bufnr, 0, -1, false, formatted_lines)
@@ -347,9 +353,12 @@ open = function(opts)
     )
   end
 
-  a.await(a.throttled_iterator(function()
-    return ipairs(lines)
-  end, { on_iteration = highlight_lines }))
+  a.throttled_iterator_async {
+    iterator_factory = function()
+      return ipairs(lines)
+    end,
+    opts = { on_iteration = highlight_lines },
+  }
 
   local width_padding = 10
 
@@ -441,21 +450,22 @@ open = function(opts)
     r_opts = vim.deepcopy(r_opts)
     r_opts.tree_dir = if_nil(r_opts.tree_dir, opts.tree_dir)
 
-    local spawn = a.make_spawn(open)
-    spawn {
-      tree_dir = r_opts.tree_dir,
-      _cursor_pos_type = r_opts._cursor_pos_type,
-      _dest_path = r_opts._dest_path,
-      _prev_dir = r_opts._prev_dir,
+    vim.async.run("open_task", function()
+      open {
+        tree_dir = r_opts.tree_dir,
+        _cursor_pos_type = r_opts._cursor_pos_type,
+        _dest_path = r_opts._dest_path,
+        _prev_dir = r_opts._prev_dir,
 
-      icons_enabled = opts.icons_enabled,
+        icons_enabled = opts.icons_enabled,
 
-      _tree_bufnr = opts._tree_bufnr,
-      _curr_winnr = opts._curr_winnr,
-      _curr_bufnr = opts._curr_bufnr,
-      _history = opts._history,
-      _prev_idx = vim.fn.line ".",
-    }
+        _tree_bufnr = opts._tree_bufnr,
+        _curr_winnr = opts._curr_winnr,
+        _curr_bufnr = opts._curr_bufnr,
+        _history = opts._history,
+        _prev_idx = vim.fn.line ".",
+      }
+    end)
   end
 
   local out_dir = function()
@@ -863,7 +873,7 @@ open = function(opts)
     vim.cmd("vertical pedit " .. line.abs_path)
     local preview_winnr = get_preview_winnr()
     assert(preview_winnr ~= nil)
-    vim.api.nvim_win_set_width(preview_winnr, opts.preview_width)
+    vim.api.nvim_win_resize(preview_winnr, opts.preview_width, -1)
   end
 
   local normal_keymap_fns = {
@@ -915,8 +925,9 @@ end
 
 --- @param opts? TreeOpts
 M.tree = function(opts)
-  local spawn = a.make_spawn(open)
-  spawn(opts)
+  return vim.async.run("tree_task", function()
+    open(opts)
+  end)
 end
 
 return M

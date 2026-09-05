@@ -2,6 +2,8 @@
 
 A simple file tree built with the `vim.fs.*` utilities
 
+_Requires nvim 0.13 (currently nightly)_
+
 ![demo](https://elanmed.dev/nvim-plugins/tree.png)
 
 ## Features

@@ -1,4 +1,4 @@
-*tree.txt*                                          Last change: 2026 March 31
+*tree.txt*                                          Last change: 2026 April 24
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
@@ -29,6 +29,8 @@ Plug remaps ............................................... |tree-plug-remaps|
 
 
 A simple file tree built with the `vim.fs.*` utilities
+
+_Requires nvim 0.13 (currently nightly)_
 
 demo <https://elanmed.dev/nvim-plugins/tree.png>
 

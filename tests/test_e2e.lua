@@ -113,12 +113,9 @@ local T = MiniTest.new_set {
       child.o.lines = 20
       child.o.columns = 30
       child.lua [[
-        M.tree {
+        M.tree({
           tree_dir = "./test_dir",
-        }
-        -- wait for the async open() to complete before setting buffer-local
-        -- keymaps, so they land on the tree buffer (not the initial scratch buf).
-        vim.wait(1)
+        }):wait()
         vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = true })
         vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = true })
         vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = true })
@@ -233,7 +230,7 @@ T["tree"]["plug remaps"]["TreeSelect"] = function()
   expect_lines {
     "<div>content</div>",
   }
-  child.lua [[M.tree(); vim.wait(1)]]
+  child.lua [[M.tree():wait()]]
   expect_lines {
     " 󰌝 index.html",
     " 󰌞 index.js",
@@ -925,12 +922,12 @@ T["tree"]["cursor placement"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["curr-bufname"] = MiniTest.new_set()
 T["tree"]["cursor placement"]["curr-bufname"]["found"] = function()
   child.lua [[vim.cmd.edit("test_dir/dir_a/init.lua")]]
-  child.lua [[M.tree(); vim.wait(1)]]
+  child.lua [[M.tree():wait()]]
   expect_cursor_line(2, "  init.lua")
 end
 T["tree"]["cursor placement"]["curr-bufname"]["not found"] = function()
   child.lua [[vim.cmd.edit("test_dir/dir_b/Makefile")]]
-  child.lua [[M.tree({ tree_dir = "./test_dir/dir_a" }); vim.wait(1)]]
+  child.lua [[M.tree({ tree_dir = "./test_dir/dir_a" }):wait()]]
   expect_cursor_line(1, " 󰉋 dir_c")
 end
 
