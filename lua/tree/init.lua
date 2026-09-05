@@ -616,12 +616,7 @@ open = function(opts)
         return
       end
 
-      local mkdir_success = vim.fn.mkdir(create_path, "p")
-      if mkdir_success == vimscript_false then
-        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", create_path)
-        return
-      end
-
+      vim.fs.mkdir(create_path, { parents = true })
       vim.schedule(function()
         recurse {
           _cursor_pos_type = "dest-path",
