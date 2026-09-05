@@ -8,8 +8,8 @@ _Requires nvim 0.13 (currently nightly)_
 
 ## Features
 
-- 1 source file (800 LOC), 1 test file
-- Files are processed in batches with coroutines to prevent the UI from freezing when opening large directories
+- 1 source file (~900 LOC), 1 test file (~1000 LOC)
+- Files are rendered in async batches to prevent the UI from freezing when opening large directories
 - Safe and robust file system actions:
   - Every action requires user confirmation
   - A file cannot be renamed to an existing path
