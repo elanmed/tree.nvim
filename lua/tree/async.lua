@@ -1,23 +1,17 @@
--- async.nvim @ debde5c5a3f10fa9cbcd98b2d86afb9fe29d2728
+-- async.nvim @ 53f68e5ad41c0ceae9173926cec194dc0520c370
 local M = {}
 
-local function safe_resume(...)
-  local ok, err = coroutine.resume(...)
-  if not ok then
-    error(err)
-  end
-end
-
---- @class ThrottledIteratorOpts<ControlVar>
---- @field threshold_ns? number The minimum time in nanoseconds between yields to the main loop. Defaults to 10ms.
---- @field should_cancel? fun():boolean Called before each iteration; return true to stop early. Defaults to always returning false.
---- @field on_iteration fun(control_var: ControlVar, ...):nil Called for each item with the control variable and the iterator values.
+--- @class ThrottledIteratorOpts<InvariantState, ControlVar>
+--- @field iterator_factory fun(): ((fun(invariant_state: InvariantState, control_var: ControlVar):ControlVar), InvariantState?, ControlVar?)
+--- @field threshold_ns? number
+--- @field should_cancel? fun():boolean
+--- @field on_iteration fun(control_var: ControlVar, ...):nil
 
 --- @generic InvariantState, ControlVar
---- @param iterator_factory fun(): ((fun(invariant_state: InvariantState, control_var: ControlVar):ControlVar), InvariantState?, ControlVar?)
---- @param opts ThrottledIteratorOpts<ControlVar>
+--- @param opts ThrottledIteratorOpts<InvariantState, ControlVar>
 --- @param callback fun(arg:nil):nil
-M.throttled_iterator_callback = function(iterator_factory, opts, callback)
+local throttled_iterator_callback = function(opts, callback)
+  local iterator_factory = opts.iterator_factory
   local threshold_ns = opts.threshold_ns or (10 * 1000000)
   local should_cancel = opts.should_cancel or function()
     return false
@@ -29,11 +23,7 @@ M.throttled_iterator_callback = function(iterator_factory, opts, callback)
       local now = vim.uv.hrtime()
       if (now - last_yield) >= threshold_ns then
         last_yield = now
-        local thread = coroutine.running()
-        vim.schedule(function()
-          safe_resume(thread)
-        end)
-        coroutine.yield()
+        vim.async.sleep(0)
       end
     end
   end
@@ -59,17 +49,23 @@ M.throttled_iterator_callback = function(iterator_factory, opts, callback)
   end
 end
 
-M.throttled_iterator_async = vim.async.wrap(
+M.throttled_iterator = vim.async.wrap(
   2,
-  --- @class ThrottledIteratorAsyncArgs<InvariantState, ControlVar>
-  --- @field iterator_factory fun(): ((fun(invariant_state: InvariantState, control_var: ControlVar):ControlVar), InvariantState?, ControlVar?)
-  --- @field opts ThrottledIteratorOpts<ControlVar>
-
   --- @generic InvariantState, ControlVar
-  --- @param args ThrottledIteratorAsyncArgs<InvariantState, ControlVar>
+  --- @param opts ThrottledIteratorOpts<InvariantState, ControlVar>
   --- @param callback fun(arg:nil):nil
-  function(args, callback)
-    return M.throttled_iterator_callback(args.iterator_factory, args.opts, callback)
+  function(opts, callback)
+    local task = vim.async.run("throttled_iterator_taks", function()
+      throttled_iterator_callback(opts, function()
+        callback(nil)
+      end)
+    end)
+    task:on_complete(function(err)
+      if err then
+        callback(err)
+      end
+    end)
+    return task
   end
 )
 
