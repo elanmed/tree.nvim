@@ -288,8 +288,9 @@ open = function(opts)
   for name, type in vim.fs.dir(opts.tree_dir) do
     vim_fs_dir_count = vim_fs_dir_count + 1
 
-    name = type == "directory" and name .. "/" or name
     local basename = vim.fs.basename(name)
+    name = type == "directory" and name .. "/" or name
+
     local icon_placeholder = " "
     local formatted_placeholder = " " .. icon_placeholder .. basename
     max_line_width = math.max(max_line_width, #formatted_placeholder)
