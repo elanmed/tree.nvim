@@ -1,4 +1,4 @@
-.PHONY: dev clean test lint format docs
+.PHONY: dev clean test lint format docs deploy
 
 dev:
 	mkdir -p ~/.local/share/nvim/site/pack/dev/start/tree.nvim
