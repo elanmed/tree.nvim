@@ -6,7 +6,7 @@ local vimscript_false = 0
 local ns_id = vim.api.nvim_create_namespace "Tree"
 vim.g.tree_winnr = -1
 
-local a = require "tree.async"
+local a = require "tree.async-iterators"
 
 local esc_to_normal = function()
   local curr_mode = vim.fn.mode()
