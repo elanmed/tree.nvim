@@ -94,6 +94,47 @@ local validate_confirm_args = function(ref_msg_pattern)
   end
 end
 
+local capture_tree_create_events = function()
+  child.lua_func(function()
+    _G.tree_create_event_count = 0
+    _G.tree_create_event_match = nil
+    _G.tree_create_event_data_is_nil = false
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "TreeCreate",
+      callback = function(event)
+        _G.tree_create_event_count = _G.tree_create_event_count + 1
+        _G.tree_create_event_match = event.match
+        _G.tree_create_event_data_is_nil = event.data == nil
+      end,
+    })
+  end)
+end
+
+local expect_tree_create_events = function(count)
+  eq(child.lua_get "_G.tree_create_event_count", count)
+  if count > 0 then
+    eq(child.lua_get "_G.tree_create_event_match", "TreeCreate")
+    eq(child.lua_get "_G.tree_create_event_data_is_nil", true)
+  end
+end
+
+local capture_copy_move_events = function()
+  child.lua_func(function()
+    _G.tree_action_event_counts = { TreeCopy = 0, TreeMove = 0 }
+    vim.api.nvim_create_autocmd("User", {
+      pattern = { "TreeCopy", "TreeMove" },
+      callback = function(event)
+        _G.tree_action_event_counts[event.match] = _G.tree_action_event_counts[event.match] + 1
+      end,
+    })
+  end)
+end
+
+local expect_copy_move_events = function(copy_count, move_count)
+  eq(child.lua_get "_G.tree_action_event_counts.TreeCopy", copy_count)
+  eq(child.lua_get "_G.tree_action_event_counts.TreeMove", move_count)
+end
+
 local mock_confirm = function(user_choice)
   local lua_cmd = string.format(
     [[vim.fn.confirm = function(...)
@@ -103,6 +144,39 @@ local mock_confirm = function(user_choice)
     user_choice
   )
   child.lua(lua_cmd)
+end
+
+local test_partial_copy_failure = function(action)
+  child.type_keys "l"
+  child.type_keys "j"
+  capture_copy_move_events()
+  child.lua_func(function()
+    _G.tree_system_original = vim.system
+    rawset(vim, "system", function(cmd)
+      local partial_path = vim.fs.joinpath(cmd[4], vim.fs.basename(cmd[3]))
+      vim.fn.writefile({ "partial copy" }, partial_path)
+      return {
+        wait = function()
+          return { code = 1 }
+        end,
+      }
+    end)
+  end)
+  child.type_keys(action)
+  child.type_keys { "<C-u>", "test_dir/dir_b" }
+  mock_confirm(1)
+  expect.error(function()
+    child.type_keys "<CR>"
+  end)
+  child.lua_func(function()
+    rawset(vim, "system", _G.tree_system_original)
+    _G.tree_system_original = nil
+  end)
+
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_b/init.lua", false)
+  expect_message "[tree.nvim]: `cp -r` exit code was 1"
+  expect_copy_move_events(0, 0)
 end
 
 local T = MiniTest.new_set {
@@ -157,6 +231,41 @@ local T = MiniTest.new_set {
 }
 
 T["tree"] = MiniTest.new_set()
+
+T["tree"]["tree_dir"] = MiniTest.new_set()
+T["tree"]["tree_dir"]["nonexistent path reports an error without opening a window"] = function()
+  child.type_keys "q"
+  child.cmd "messages clear"
+  child.lua("M.tree({ tree_dir = ... }):wait()", { "test_dir/missing" })
+  expect_message(
+    "[tree.nvim]: Tree directory does not exist or cannot be accessed: "
+      .. vim.fs.abspath "test_dir/missing"
+  )
+  eq(#child.api.nvim_list_wins(), 1)
+end
+T["tree"]["tree_dir"]["file path reports an error without opening a window"] = function()
+  child.type_keys "q"
+  child.cmd "messages clear"
+  child.lua("M.tree({ tree_dir = ... }):wait()", { "test_dir/dir_a/init.lua" })
+  expect_message(
+    "[tree.nvim]: Tree path is not a directory: " .. vim.fs.abspath "test_dir/dir_a/init.lua"
+  )
+  eq(#child.api.nvim_list_wins(), 1)
+end
+T["tree"]["empty tree"] = function()
+  child.fn.mkdir "test_dir/empty"
+  child.type_keys "q"
+  child.cmd "messages clear"
+  child.lua("M.tree({ tree_dir = ... }):wait()", { "test_dir/empty" })
+  expect_lines { "" }
+  child.lua_func(function()
+    vim.keymap.set("n", "yy", "<Plug>TreeCopy", { buffer = true })
+    vim.keymap.set("n", "m", "<Plug>TreeMove", { buffer = true })
+  end)
+  child.type_keys "yy"
+  child.type_keys "m"
+  eq(child.cmd_capture "messages", "")
+end
 
 T["tree"]["plug remaps"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeInDir"] = function()
@@ -343,6 +452,7 @@ end
 
 T["tree"]["plug remaps"]["TreeCreate"] = MiniTest.new_set()
 T["tree"]["plug remaps"]["TreeCreate"]["file"] = function()
+  capture_tree_create_events()
   expect_cursor_line(1, " 󰉋 dir_a")
   child.type_keys "o"
   eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/")
@@ -350,9 +460,11 @@ T["tree"]["plug remaps"]["TreeCreate"]["file"] = function()
   mock_confirm(1)
   child.type_keys "<CR>"
   expect_fs_exists(vim.fs.abspath "test_dir/new_file.txt")
+  expect_tree_create_events(1)
   validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_file.txt")
 end
 T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function()
+  capture_tree_create_events()
   expect_cursor_line(1, " 󰉋 dir_a")
   child.type_keys "o"
   eq(child.fn.getcmdline(), vim.fs.abspath "test_dir/")
@@ -360,7 +472,95 @@ T["tree"]["plug remaps"]["TreeCreate"]["directory"] = function()
   mock_confirm(1)
   child.type_keys "<CR>"
   expect_fs_exists(vim.fs.abspath "test_dir/new_dir")
+  expect_tree_create_events(1)
   validate_confirm_args("Create? " .. vim.fs.abspath "test_dir/new_dir")
+end
+T["tree"]["plug remaps"]["TreeCreate"]["filesystem failure"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeCreate"]["filesystem failure"]["file parent is not a directory"] = function()
+  child.fn.writefile({}, "test_dir/not_a_dir")
+  capture_tree_create_events()
+  child.cmd "messages clear"
+  child.type_keys "o"
+  child.type_keys { "<C-u>", "test_dir/not_a_dir/new_file.txt" }
+  mock_confirm(1)
+  expect.error(function()
+    child.type_keys "<CR>"
+  end)
+
+  expect_fs_exists(vim.fs.abspath "test_dir/not_a_dir/new_file.txt", false)
+  expect_message(
+    "[tree.nvim]: Could not create parent directory: " .. vim.fs.abspath "test_dir/not_a_dir"
+  )
+  expect_tree_create_events(0)
+end
+T["tree"]["plug remaps"]["TreeCreate"]["filesystem failure"]["directory parent is not a directory"] = function()
+  child.fn.writefile({}, "test_dir/not_a_dir")
+  capture_tree_create_events()
+  child.cmd "messages clear"
+  child.type_keys "o"
+  child.type_keys { "<C-u>", "test_dir/not_a_dir/new_dir/" }
+  mock_confirm(1)
+  expect.error(function()
+    child.type_keys "<CR>"
+  end)
+
+  expect_fs_exists(vim.fs.abspath "test_dir/not_a_dir/new_dir", false)
+  expect_message(
+    "[tree.nvim]: Could not create directory: " .. vim.fs.abspath "test_dir/not_a_dir/new_dir"
+  )
+  expect_tree_create_events(0)
+end
+T["tree"]["plug remaps"]["TreeCreate"]["filesystem failure"]["directory stat is missing"] = function()
+  capture_tree_create_events()
+  child.cmd "messages clear"
+  child.lua_func(function()
+    _G.tree_fs_mkdir_original = vim.fs.mkdir
+    rawset(vim.fs, "mkdir", function() end)
+  end)
+  child.type_keys "o"
+  child.type_keys { "<C-u>", "test_dir/not_created/" }
+  mock_confirm(1)
+  expect.error(function()
+    child.type_keys "<CR>"
+  end)
+  child.lua_func(function()
+    rawset(vim.fs, "mkdir", _G.tree_fs_mkdir_original)
+    _G.tree_fs_mkdir_original = nil
+  end)
+
+  expect_fs_exists(vim.fs.abspath "test_dir/not_created", false)
+  expect_message(
+    "[tree.nvim]: Directory does not exist after mkdir: " .. vim.fs.abspath "test_dir/not_created"
+  )
+  expect_tree_create_events(0)
+end
+T["tree"]["plug remaps"]["TreeCreate"]["filesystem failure"]["file write fails"] = function()
+  capture_tree_create_events()
+  child.cmd "messages clear"
+  child.lua_func(function()
+    _G.tree_writefile_original = vim.fn.writefile
+    rawset(vim.fn, "writefile", function()
+      return -1
+    end)
+  end)
+  child.type_keys "o"
+  child.type_keys { "<C-u>", "test_dir/write_failed.txt" }
+  mock_confirm(1)
+  expect.error(function()
+    child.type_keys "<CR>"
+  end)
+  child.lua_func(function()
+    rawset(vim.fn, "writefile", _G.tree_writefile_original)
+    _G.tree_writefile_original = nil
+  end)
+
+  expect_fs_exists(vim.fs.abspath "test_dir/write_failed.txt", false)
+  expect_message(
+    ("[tree.nvim]: vim.fn.writefile({}, %s) returned -1"):format(
+      vim.fs.abspath "test_dir/write_failed.txt"
+    )
+  )
+  expect_tree_create_events(0)
 end
 T["tree"]["plug remaps"]["TreeCreate"]["children path"] = function()
   expect_cursor_line(1, " 󰉋 dir_a")
@@ -588,6 +788,30 @@ T["tree"]["plug remaps"]["TreeDelete"]["cleans up buffers in directory"] = funct
 end
 
 T["tree"]["plug remaps"]["TreeCopy"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeCopy"]["removes partial destination after cp failure"] = function()
+  test_partial_copy_failure "yy"
+end
+T["tree"]["plug remaps"]["TreeCopy"]["destination parent is not a directory"] = function()
+  child.type_keys "l"
+  child.type_keys "j"
+  child.fn.writefile({}, "test_dir/not_a_dir")
+  capture_copy_move_events()
+  child.cmd "messages clear"
+  child.type_keys "yy"
+  child.type_keys { "<C-u>", "test_dir/not_a_dir/target" }
+  mock_confirm(1)
+  expect.error(function()
+    child.type_keys "<CR>"
+  end)
+
+  expect_fs_exists(vim.fs.abspath "test_dir/dir_a/init.lua")
+  expect_fs_exists(vim.fs.abspath "test_dir/not_a_dir/target/init.lua", false)
+  expect_message(
+    "[tree.nvim]: Could not create destination parent directory: "
+      .. vim.fs.abspath "test_dir/not_a_dir"
+  )
+  expect_copy_move_events(0, 0)
+end
 T["tree"]["plug remaps"]["TreeCopy"]["prepopulates dirname"] = function()
   expect_cursor_line(1, " 󰉋 dir_a")
   child.type_keys "l"
@@ -751,6 +975,9 @@ T["tree"]["plug remaps"]["TreeCopy"]["blocks on modified buffer"] = function()
 end
 
 T["tree"]["plug remaps"]["TreeMove"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreeMove"]["does not delete source after partial cp failure"] = function()
+  test_partial_copy_failure "m"
+end
 T["tree"]["plug remaps"]["TreeMove"]["prepopulates dirname"] = function()
   expect_cursor_line(1, " 󰉋 dir_a")
   child.type_keys "l"

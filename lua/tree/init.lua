@@ -253,6 +253,21 @@ open = function(opts)
   opts.tree_dir = if_nil(opts.tree_dir, curr_dir)
   opts.tree_dir = vim.fs.normalize(vim.fs.abspath(opts.tree_dir))
 
+  local tree_dir_stat = fs_exists(opts.tree_dir)
+  if not tree_dir_stat then
+    notify(
+      vim.log.levels.ERROR,
+      "Tree directory does not exist or cannot be accessed: %s",
+      opts.tree_dir
+    )
+    return
+  end
+
+  if tree_dir_stat.type ~= "directory" then
+    notify(vim.log.levels.ERROR, "Tree path is not a directory: %s", opts.tree_dir)
+    return
+  end
+
   opts._tree_bufnr = (function()
     if opts._tree_bufnr then
       return opts._tree_bufnr
@@ -617,7 +632,23 @@ open = function(opts)
         return
       end
 
-      vim.fs.mkdir(create_path, { parents = true })
+      local mkdir_ok = pcall(vim.fs.mkdir, create_path, { parents = true })
+      if not mkdir_ok then
+        notify(vim.log.levels.ERROR, "Could not create directory: %s", create_path)
+        return
+      end
+
+      local create_stat = fs_exists(create_path)
+      if not create_stat then
+        notify(vim.log.levels.ERROR, "Directory does not exist after mkdir: %s", create_path)
+        return
+      end
+      if create_stat.type ~= "directory" then
+        notify(vim.log.levels.ERROR, "Created path is not a directory: %s", create_path)
+        return
+      end
+
+      vim.api.nvim_exec_autocmds("User", { pattern = "TreeCreate" })
       vim.schedule(function()
         recurse {
           _cursor_pos_type = "dest-path",
@@ -632,15 +663,26 @@ open = function(opts)
       return
     end
 
-    local mkdir_success = vim.fn.mkdir(vim.fs.dirname(create_path), "p")
-    if mkdir_success == vimscript_false then
-      notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s) returned 0", vim.fs.dirname(create_path))
+    local create_dir = vim.fs.dirname(create_path)
+    local mkdir_ok = pcall(vim.fs.mkdir, create_dir, { parents = true })
+    if not mkdir_ok then
+      notify(vim.log.levels.ERROR, "Could not create parent directory: %s", create_dir)
+      return
+    end
+
+    local create_dir_stat = fs_exists(create_dir)
+    if not create_dir_stat then
+      notify(vim.log.levels.ERROR, "Parent directory does not exist after mkdir: %s", create_dir)
+      return
+    end
+    if create_dir_stat.type ~= "directory" then
+      notify(vim.log.levels.ERROR, "Parent path is not a directory: %s", create_dir)
       return
     end
 
     local writefile_success = vim.fn.writefile({}, create_path)
     if writefile_success == -1 then
-      notify(vim.log.levels.ERROR "vim.fn.writefile({}, %s) returned -1", create_path)
+      notify(vim.log.levels.ERROR, "vim.fn.writefile({}, %s) returned -1", create_path)
       return
     end
 
@@ -755,6 +797,9 @@ open = function(opts)
   local copy_and_maybe_delete = function(should_delete)
     local display_name = should_delete and "Move" or "Copy"
     local line = lines[vim.fn.line "."]
+    if not line then
+      return
+    end
     local dirname = vim.fs.joinpath(vim.fs.dirname(line.abs_path), "/")
 
     local raw_copy_path = vim.fn.input(("%s to: "):format(display_name), dirname)
@@ -784,13 +829,35 @@ open = function(opts)
         return
       end
 
-      local mkdir_success = vim.fn.mkdir(vim.fs.dirname(copy_path), "p")
-      if mkdir_success == vimscript_false then
-        notify(vim.log.levels.ERROR, "vim.fn.mkdir(%s, p) returned 0", vim.fs.dirname(copy_path))
+      local copy_parent = vim.fs.dirname(copy_path)
+      local mkdir_ok = pcall(vim.fs.mkdir, copy_parent, { parents = true })
+      if not mkdir_ok then
+        notify(
+          vim.log.levels.ERROR,
+          "Could not create destination parent directory: %s",
+          copy_parent
+        )
         esc_to_normal()
         return
       end
 
+      local copy_parent_stat = fs_exists(copy_parent)
+      if not copy_parent_stat then
+        notify(
+          vim.log.levels.ERROR,
+          "Destination parent directory does not exist after mkdir: %s",
+          copy_parent
+        )
+        esc_to_normal()
+        return
+      end
+      if copy_parent_stat.type ~= "directory" then
+        notify(vim.log.levels.ERROR, "Destination parent path is not a directory: %s", copy_parent)
+        esc_to_normal()
+        return
+      end
+
+      local operation_completed = false
       for _, line in ipairs(lines_arg) do
         local copy_file_path =
           vim.fs.normalize(vim.fs.joinpath(copy_path, vim.fs.relpath(opts.tree_dir, line.abs_path)))
@@ -813,6 +880,12 @@ open = function(opts)
 
         local obj_cp = vim.system({ "cp", "-r", line.abs_path, copy_path }):wait()
         if obj_cp.code ~= 0 then
+          if fs_exists(copy_file_path) then
+            local cleanup_success = vim.fn.delete(copy_file_path, "rf")
+            if cleanup_success == -1 then
+              notify(vim.log.levels.ERROR, "Could not remove partial copy: %s", copy_file_path)
+            end
+          end
           notify(vim.log.levels.ERROR, "`cp -r` exit code was %d", obj_cp.code)
           goto continue
         end
@@ -825,14 +898,17 @@ open = function(opts)
           end
           buf_delete_path(line.abs_path)
         end
+        operation_completed = true
 
         ::continue::
       end
 
-      if should_delete then
-        vim.api.nvim_exec_autocmds("User", { pattern = "TreeMove" })
-      else
-        vim.api.nvim_exec_autocmds("User", { pattern = "TreeCopy" })
+      if operation_completed then
+        if should_delete then
+          vim.api.nvim_exec_autocmds("User", { pattern = "TreeMove" })
+        else
+          vim.api.nvim_exec_autocmds("User", { pattern = "TreeCopy" })
+        end
       end
       esc_to_normal()
       vim.schedule(function()
