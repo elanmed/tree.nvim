@@ -119,6 +119,7 @@ local T = MiniTest.new_set {
         }):wait()
         vim.keymap.set("n", "<cr>", "<Plug>TreeSelect", { buffer = true })
         vim.keymap.set("n", "q", "<Plug>TreeCloseTree", { buffer = true })
+        vim.keymap.set("n", "p", "<Plug>TreePreviewToggle", { buffer = true })
         vim.keymap.set("n", "h", "<Plug>TreeOutDir", { buffer = true })
         vim.keymap.set("n", "l", "<Plug>TreeInDir", { buffer = true })
         vim.keymap.set("n", "yr", "<Plug>TreeYankRelativePath", { buffer = true })
@@ -245,6 +246,48 @@ T["tree"]["plug remaps"]["TreeCloseTree"] = function()
   expect_cursor_line(1, " 󰉋 dir_a")
   child.type_keys "q"
   expect_lines { "" }
+end
+T["tree"]["plug remaps"]["TreePreviewToggle"] = MiniTest.new_set()
+T["tree"]["plug remaps"]["TreePreviewToggle"]["treats Ex metacharacters as filename text"] = function()
+  local path = "test_dir/a | let g.tree_preview_injected = 1"
+  child.fn.writefile({ "preview content" }, path)
+  child.lua [[M.tree({ tree_dir = "./test_dir" }):wait()]]
+  child.lua [[vim.keymap.set("n", "p", "<Plug>TreePreviewToggle", { buffer = true })]]
+
+  local preview_line
+  for index, line in ipairs(child.api.nvim_buf_get_lines(0, 0, -1, false)) do
+    if line:find("a | let g.tree_preview_injected = 1", 1, true) then
+      preview_line = index
+      break
+    end
+  end
+  eq(preview_line ~= nil, true)
+  child.api.nvim_win_set_cursor(child.api.nvim_get_current_win(), { preview_line, 0 })
+  child.type_keys "p"
+
+  eq(child.lua_get "vim.g.tree_preview_injected == nil", true)
+  local preview_winnr = child.lua_func(function()
+    for _, winnr in ipairs(vim.api.nvim_list_wins()) do
+      if vim.wo[winnr].previewwindow then
+        return winnr
+      end
+    end
+  end)
+  eq(preview_winnr ~= nil, true)
+  local preview_bufnr = child.api.nvim_win_get_buf(preview_winnr)
+  eq(child.api.nvim_buf_get_name(preview_bufnr), vim.fs.abspath(path))
+  eq(child.api.nvim_buf_get_lines(preview_bufnr, 0, -1, false), { "preview content" })
+
+  child.type_keys "p"
+  local preview_is_closed = child.lua_func(function()
+    for _, winnr in ipairs(vim.api.nvim_list_wins()) do
+      if vim.wo[winnr].previewwindow then
+        return false
+      end
+    end
+    return true
+  end)
+  eq(preview_is_closed, true)
 end
 T["tree"]["plug remaps"]["TreeYankRelativePath"] = function()
   expect_cursor_line(1, " 󰉋 dir_a")

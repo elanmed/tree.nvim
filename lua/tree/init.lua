@@ -847,7 +847,6 @@ open = function(opts)
     copy_lines(visual_or_current_lines)
   end
 
-  -- TODO: tests
   local function preview_toggle()
     local line = lines[vim.fn.line "."]
     if not line then
@@ -873,7 +872,12 @@ open = function(opts)
       end
     end
 
-    vim.cmd("vertical pedit " .. line.abs_path)
+    vim.api.nvim_cmd({
+      cmd = "pedit",
+      args = { line.abs_path },
+      mods = { vertical = true },
+      magic = { bar = false, file = false },
+    }, {})
     local preview_winnr = get_preview_winnr()
     assert(preview_winnr ~= nil)
     vim.api.nvim_win_resize(preview_winnr, opts.preview_width, -1)
