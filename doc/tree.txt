@@ -1,4 +1,4 @@
-*tree.txt*                                      Last change: 2026 September 05
+*tree.txt*                                       Last change: 2026 November 03
 
 ==============================================================================
 Table of Contents                                     *tree-table-of-contents*
@@ -39,7 +39,7 @@ demo <https://elanmed.dev/nvim-plugins/tree.png>
 FEATURES                                                       *tree-features*
 
 
-- 1 source file (~900 LOC), 1 test file (~1000 LOC)
+- 1 source file (~900 LOC), 1 test file (~1300 LOC)
 - Files are rendered in async batches to prevent the UI from freezing when
   opening large directories
 - Safe and robust file system actions: - Every action requires user
