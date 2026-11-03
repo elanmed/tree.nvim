@@ -1,4 +1,5 @@
-require("mini.test").setup()
+local MiniTest = require "mini.test"
+MiniTest.setup()
 
 local expect = MiniTest.expect
 local eq = MiniTest.expect.equality

@@ -2,9 +2,9 @@ local M = {}
 
 local vimscript_true = 1
 local vimscript_false = 0
+local tree_winnr = -1
 
 local ns_id = vim.api.nvim_create_namespace "Tree"
-vim.g.tree_winnr = -1
 
 local a = require "tree.async-iterators"
 
@@ -296,7 +296,7 @@ open = function(opts)
     max_line_width = math.max(max_line_width, #formatted_placeholder)
   end
 
-  vim.g.tree_winnr = (function()
+  tree_winnr = (function()
     local dirname = vim.fs.joinpath(vim.fs.basename(opts.tree_dir), "/")
     local title = ("%s (%d lines)"):format(dirname, vim_fs_dir_count)
     local border_height = 2
@@ -308,14 +308,14 @@ open = function(opts)
       height = 1
     end
 
-    if vim.api.nvim_win_is_valid(vim.g.tree_winnr) then
-      vim.api.nvim_set_current_win(vim.g.tree_winnr)
-      vim.api.nvim_win_set_config(vim.g.tree_winnr, {
+    if vim.api.nvim_win_is_valid(tree_winnr) then
+      vim.api.nvim_set_current_win(tree_winnr)
+      vim.api.nvim_win_set_config(tree_winnr, {
         title = title,
         width = width,
         height = height,
       })
-      return vim.g.tree_winnr
+      return tree_winnr
     end
 
     local win_config = {
@@ -334,10 +334,10 @@ open = function(opts)
 
     return tree_winnr
   end)()
-  vim.api.nvim_win_set_buf(vim.g.tree_winnr, opts._tree_bufnr)
+  vim.api.nvim_win_set_buf(tree_winnr, opts._tree_bufnr)
   vim.api.nvim_exec_autocmds("User", {
     pattern = "TreeOpen",
-    data = { winnr = vim.g.tree_winnr, bufnr = opts._tree_bufnr },
+    data = { winnr = tree_winnr, bufnr = opts._tree_bufnr },
   })
 
   --- @param name string
@@ -414,37 +414,37 @@ open = function(opts)
   }
 
   if opts._cursor_pos_type == "curr-bufname" then
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { curr_bufname_idx or 1, 0 })
+    vim.api.nvim_win_set_cursor(tree_winnr, { curr_bufname_idx or 1, 0 })
   elseif opts._cursor_pos_type == "history-stack" then
     if history_line then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { history_line, 0 })
+      vim.api.nvim_win_set_cursor(tree_winnr, { history_line, 0 })
       table.remove(opts._history)
     else
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0 })
+      vim.api.nvim_win_set_cursor(tree_winnr, { 1, 0 })
       opts._history = {}
     end
   elseif opts._cursor_pos_type == "prev-dir-idx" then
     if prev_dir_idx then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { prev_dir_idx, 0 })
+      vim.api.nvim_win_set_cursor(tree_winnr, { prev_dir_idx, 0 })
     else
       notify(vim.log.levels.ERROR, "Expected to find the prev dir when setting the cursor")
     end
   elseif opts._cursor_pos_type == "prev-idx" then
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, {
+    vim.api.nvim_win_set_cursor(tree_winnr, {
       normalize_prev_idx { lines = lines, _prev_idx = opts._prev_idx },
       0,
     })
   elseif opts._cursor_pos_type == "dest-path" then
     if dest_path_idx then
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { dest_path_idx, 0 })
+      vim.api.nvim_win_set_cursor(tree_winnr, { dest_path_idx, 0 })
     else
-      vim.api.nvim_win_set_cursor(vim.g.tree_winnr, {
+      vim.api.nvim_win_set_cursor(tree_winnr, {
         normalize_prev_idx { lines = lines, _prev_idx = opts._prev_idx },
         0,
       })
     end
   else
-    vim.api.nvim_win_set_cursor(vim.g.tree_winnr, { 1, 0 })
+    vim.api.nvim_win_set_cursor(tree_winnr, { 1, 0 })
   end
 
   --- @class RecurseOpts
@@ -503,8 +503,8 @@ open = function(opts)
   end
 
   local close_tree = function()
-    if vim.api.nvim_win_is_valid(vim.g.tree_winnr) then
-      vim.api.nvim_win_close(vim.g.tree_winnr, true)
+    if vim.api.nvim_win_is_valid(tree_winnr) then
+      vim.api.nvim_win_close(tree_winnr, true)
     end
   end
 
